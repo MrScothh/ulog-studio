@@ -1,0 +1,70 @@
+{
+  "name": "ulog-studio",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Offline PX4 ULog flight log analyzer: Flight Review plots plus tuning analyses, as a Windows app and an offline web app",
+  "license": "BSD-3-Clause",
+  "author": "MrScothh",
+  "homepage": "https://mrscothh.github.io/ulog-studio/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MrScothh/ulog-studio.git"
+  },
+  "bugs": {
+    "url": "https://github.com/MrScothh/ulog-studio/issues"
+  },
+  "keywords": [
+    "px4",
+    "ulog",
+    "flight-review",
+    "drone",
+    "log-analysis",
+    "tauri",
+    "pwa"
+  ],
+  "engines": {
+    "node": ">=20.19"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "build:web": "vite build --mode web",
+    "build:single": "vite build --mode single",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "tauri": "tauri",
+    "build:exe": "tauri build",
+    "release": "node scripts/release.mjs"
+  },
+  "dependencies": {
+    "@fluentui/react-components": "^9.75.3",
+    "@fluentui/react-icons": "^2.0.347",
+    "@tauri-apps/api": "^2.12.5",
+    "@tauri-apps/plugin-dialog": "^2.8.4",
+    "@tauri-apps/plugin-process": "^2.4.0",
+    "@tauri-apps/plugin-updater": "^2.14.1",
+    "comlink": "^4.4.2",
+    "fft.js": "^4.0.4",
+    "leaflet": "^1.9.4",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "uplot": "^1.6.32",
+    "xz-decompress": "^0.2.3"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.12.6",
+    "@types/leaflet": "^1.9.22",
+    "@types/node": "^26.6.7",
+    "@types/react": "^19.3.1",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.3.0",
+    "playwright-core": "^1.65.1",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8",
+    "vite-plugin-pwa": "^2.0.0",
+    "vite-plugin-singlefile": "^2.3.4",
+    "vitest": "^5.1.1"
+  }
+}

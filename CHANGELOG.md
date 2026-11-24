@@ -1,0 +1,13 @@
+# Changelog
+
+## 0.1.0 — 2026-11-24
+
+First release.
+
+- Offline ULog parser and PX4 event decoding (metadata from the log or bundled), analysis in a Web Worker.
+- Flight Review plots ported: tracking, actuators, vibration, FFT/spectrograms, power, GPS & estimator, system, parameters, messages, PID step response.
+- Flight timeline with modes, in-air state, alerts and a shared cursor across charts, map and top-down view.
+- Tuning: quiet-hover PSD, aliasing check, gyro filter response and what-if replay on raw FIFO gyro, plant identification from stick doublets and rate-loop margins.
+- Motor imbalance → CoG offset, voltage-normalised hover thrust, GPS readiness at arming, loop timing and logging rates.
+- Multi-flight comparison, parameter diff with QGroundControl `.params` files, Explorer, HTML report, CSV/PNG/`.params` exports.
+- Windows app (Tauri 2) with signed auto-update; offline PWA on GitHub Pages; single-file web app.

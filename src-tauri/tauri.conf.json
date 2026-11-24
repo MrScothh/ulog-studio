@@ -1,0 +1,59 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "productName": "ULog Studio",
+  "version": "../package.json",
+  "identifier": "app.ulogstudio.desktop",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:5173",
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "ULog Studio",
+        "width": 1440,
+        "height": 900,
+        "minWidth": 960,
+        "minHeight": 600,
+        "resizable": true,
+        "dragDropEnabled": false,
+        "center": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://tile.openstreetmap.org; font-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost data: blob:"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "createUpdaterArtifacts": true,
+    "publisher": "ULog Studio",
+    "copyright": "BSD-3-Clause",
+    "category": "Utility",
+    "shortDescription": "Offline PX4 flight log analyzer",
+    "longDescription": "Analyse PX4 ULog flight logs offline: Flight Review plots, vibration and filter analysis, rate-loop identification, multi-flight comparison.",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "fileAssociations": [
+      { "ext": ["ulg"], "name": "PX4 ULog", "description": "PX4 flight log", "role": "Viewer", "mimeType": "application/octet-stream" }
+    ],
+    "windows": {
+      "nsis": { "installMode": "currentUser", "displayLanguageSelector": false, "languages": ["English", "Italian"] }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDA2NDczMUNEQ0I1M0YxMzkKUldRNThWUEx6VEZIQmw4YURkUkVoNWFoOElWQXU1YnRqNm04SjJVZTIvdUU2VVFWTFdoQVVZZG8K",
+      "windows": { "installMode": "passive" }
+    }
+  }
+}

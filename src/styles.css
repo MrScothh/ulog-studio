@@ -1,0 +1,57 @@
+/* Global base styles; component styles live in Fluent makeStyles. */
+:root {
+  color-scheme: light dark;
+  --u-text: #242424;
+  --u-muted: #616161;
+  --u-surface: #ffffff;
+  --u-hover: rgba(0, 0, 0, 0.04);
+  --u-map-bg: #f3f3f3;
+}
+:root[data-theme='dark'] {
+  --u-text: #e6e6e6;
+  --u-muted: #adadad;
+  --u-surface: #292929;
+  --u-hover: rgba(255, 255, 255, 0.06);
+  --u-map-bg: #1f1f1f;
+}
+html, body, #root { margin: 0; height: 100%; }
+body {
+  font-family: 'Segoe UI Variable Text', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: #fafafa;
+  overflow: hidden;
+}
+:root[data-theme='dark'] body { background: #1f1f1f; }
+
+/* uPlot legend restyled to match Fluent */
+.uplot-host .uplot { font-family: inherit; }
+.uplot-host .u-legend { font-size: 12px; color: var(--u-text); text-align: left; margin-top: 2px; display: flex; flex-wrap: wrap; gap: 0 2px; }
+.uplot-host .u-legend tr { display: inline-flex; align-items: center; margin-right: 6px; }
+.uplot-host .u-legend th { font-weight: 400; color: var(--u-muted); padding: 1px 2px; }
+.uplot-host .u-legend td { padding: 1px 2px; font-variant-numeric: tabular-nums; min-width: 46px; }
+.uplot-host .u-legend .u-marker { width: 14px; height: 0 !important; border-width: 0 0 3px 0 !important; border-style: solid; border-radius: 2px; margin-right: 6px; background: none !important; }
+.uplot-host .u-legend .u-series:first-child .u-marker { display: none; }
+.uplot-host .u-legend .u-off > * { opacity: 0.35; }
+.uplot-host .u-legend .u-series { cursor: pointer; border-radius: 4px; }
+.uplot-host .u-legend .u-series:hover { background: var(--u-hover); }
+.uplot-host .u-select { background: rgba(15, 108, 189, 0.14); }
+.uplot-host .u-cursor-x, .uplot-host .u-cursor-y { border-color: var(--u-muted) !important; }
+.uplot-host .u-cursor-y { display: none; }
+
+/* Leaflet */
+.map-host { background: var(--u-map-bg); }
+.map-offline.leaflet-container { background: var(--u-map-bg); background-image: radial-gradient(circle, rgba(128,128,128,0.25) 1px, transparent 1px); background-size: 22px 22px; }
+.leaflet-container { font-family: inherit; }
+:root[data-theme='dark'] .leaflet-bar a, :root[data-theme='dark'] .leaflet-control-scale-line { background: #2b2b2b; color: #e6e6e6; border-color: #555; }
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: rgba(128, 128, 128, 0.45); border-radius: 6px; border: 2px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* legend values only while pointing at the chart */
+.uplot-host .u-idle .u-legend td.u-value { visibility: hidden; }
+/* vehicle position at the flight cursor in the XY view */
+.xy-marker { position: absolute; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; background: #ffd166; border: 2px solid var(--u-text); pointer-events: none; z-index: 3; }
+/* chart toolbar appears on hover/focus to keep the page calm */
+.chart-actions { opacity: 0; transition: opacity 120ms ease; }
+.chart-frame:hover .chart-actions, .chart-frame:focus-within .chart-actions { opacity: 1; }
+@media (hover: none) { .chart-actions { opacity: 1; } }

@@ -1,0 +1,20 @@
+node_modules/
+dist/
+dist-web/
+dist-single/
+release/
+src-tauri/target/
+src-tauri/gen/
+e2e-out/
+reallogs-report.json
+*.log
+.DS_Store
+.claude/settings.local.json
+# private flight data — never commit
+*.ulg
+*.params
+# signing keys must stay outside the repository
+*.key
+
+# local test fixtures that point at private logs
+*.local.json
