@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.2 — 2026-11-24
+
+- Parameters: rows are marked as "not the airframe default" only when the log carries airframe defaults (as Flight Review does); calmer row markers in tables.
+- Messages: PROTOCOL-level events (health/arming summaries) are hidden, as in QGroundControl.
+
 ## 0.1.1 — 2026-11-24
 
 - Narrow windows (e.g. 150 % display scaling on a laptop): the navigation turns into an overlay so charts keep their width.

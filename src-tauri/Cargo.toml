@@ -1,6 +1,6 @@
 [package]
 name = "ulog-studio"
-version = "0.1.1"
+version = "0.1.2"
 description = "Offline PX4 ULog flight log analyzer"
 authors = ["MrScothh", "ULog Studio contributors"]
 license = "BSD-3-Clause"
