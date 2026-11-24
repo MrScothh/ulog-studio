@@ -19,10 +19,10 @@ const useStyles = makeStyles({
 
 type Edit = { nf0: number; bw0: number; nf1: number; bw1: number; lpf: number; dlpf: number };
 
-function NumField({ label, value, onChange, step = 1, min = 0, max = 1000, hint }: { label: string; value: number; onChange: (v: number) => void; step?: number; min?: number; max?: number; hint?: string }) {
+function NumField({ label, value, onChange, step = 1, min = 0, max = 1000, hint, title }: { label: string; value: number; onChange: (v: number) => void; step?: number; min?: number; max?: number; hint?: string; title?: string }) {
   const s = useStyles();
   return (
-    <Field label={label} hint={hint} size="small">
+    <Field label={title ? { children: label, title } : label} hint={hint} size="small">
       <SpinButton className={s.spin} size="small" value={value} step={step} min={min} max={max}
         onChange={(_, d) => { const v = d.value ?? (d.displayValue !== undefined ? Number(d.displayValue) : NaN); if (Number.isFinite(v)) onChange(v as number); }} />
     </Field>
@@ -76,29 +76,32 @@ export function FiltersPage({ log }: { log: LogSummary }) {
   if (edit.lpf !== cur.lpf) changed.push(['IMU_GYRO_CUTOFF', edit.lpf]);
   if (edit.dlpf !== cur.dlpf) changed.push(['IMU_DGYRO_CUTOFF', edit.dlpf]);
 
+  const head = page ? { ...page, sections: page.sections.slice(0, 1) } : null;
+  const rest = page ? { ...page, sections: page.sections.slice(1) } : null;
   return (
     <div className={s.root}>
+      {head ? <PageView page={head} /> : <Spinner label="Replaying the filters on this flight…" />}
       <div className={s.panel}>
-        <Subtitle2>Proposed IMU_GYRO_* filters</Subtitle2>
+        <Subtitle2>Try other filter values</Subtitle2>
+        <Caption1 className={s.hint}>Edit a value: the gyro of this flight is filtered again with it and every chart below updates. Nothing is sent to the vehicle.</Caption1>
         <div className={s.row}>
-          <NumField label="NF0 frequency [Hz]" value={edit.nf0} onChange={set('nf0')} hint={`log: ${cur.notches[0].f}`} />
-          <NumField label="NF0 bandwidth [Hz]" value={edit.bw0} onChange={set('bw0')} hint={`log: ${cur.notches[0].bw}`} />
-          <NumField label="NF1 frequency [Hz]" value={edit.nf1} onChange={set('nf1')} hint={`log: ${cur.notches[1].f}`} />
-          <NumField label="NF1 bandwidth [Hz]" value={edit.bw1} onChange={set('bw1')} hint={`log: ${cur.notches[1].bw}`} />
-          <NumField label="Gyro LPF [Hz]" value={edit.lpf} onChange={set('lpf')} hint={`log: ${cur.lpf}`} />
-          <NumField label="D-term LPF [Hz]" value={edit.dlpf} onChange={set('dlpf')} hint={`log: ${cur.dlpf}`} />
+          <NumField label="Notch 0 [Hz]" value={edit.nf0} onChange={set('nf0')} hint={`flown: ${cur.notches[0].f}`} title="IMU_GYRO_NF0_FRQ (0 = off)" />
+          <NumField label="Notch 0 width [Hz]" value={edit.bw0} onChange={set('bw0')} hint={`flown: ${cur.notches[0].bw}`} title="IMU_GYRO_NF0_BW" />
+          <NumField label="Notch 1 [Hz]" value={edit.nf1} onChange={set('nf1')} hint={`flown: ${cur.notches[1].f}`} title="IMU_GYRO_NF1_FRQ (0 = off)" />
+          <NumField label="Notch 1 width [Hz]" value={edit.bw1} onChange={set('bw1')} hint={`flown: ${cur.notches[1].bw}`} title="IMU_GYRO_NF1_BW" />
+          <NumField label="Gyro low-pass [Hz]" value={edit.lpf} onChange={set('lpf')} hint={`flown: ${cur.lpf}`} title="IMU_GYRO_CUTOFF" />
+          <NumField label="D-term low-pass [Hz]" value={edit.dlpf} onChange={set('dlpf')} hint={`flown: ${cur.dlpf}`} title="IMU_DGYRO_CUTOFF" />
         </div>
         <div className={s.actions}>
           <Button icon={<ArrowResetRegular />} onClick={() => setEdit({ nf0: cur.notches[0].f, bw0: cur.notches[0].bw, nf1: cur.notches[1].f, bw1: cur.notches[1].bw, lpf: cur.lpf, dlpf: cur.dlpf })}>Reset to log values</Button>
           <Tooltip relationship="description" content="Writes a QGroundControl .params file with only the changed parameters. Nothing is sent to the vehicle.">
             <Button icon={<DocumentArrowDownRegular />} disabled={!changed.length} onClick={() => exportParams(changed, `${log.fileName.replace(/\.ulg$/i, '')}_filters.params`)}>Export changed (.params)</Button>
           </Tooltip>
-          <Switch checked={useRange} onChange={(_, d) => setUseRange(d.checked)} label="Replay on the current zoom range (instead of quiet hover)" />
+          <Switch checked={useRange} onChange={(_, d) => setUseRange(d.checked)} label="Use the zoomed time range instead of quiet hover" />
           {busy && <Spinner size="tiny" label="Replaying…" />}
-          <Caption1 className={s.hint}>Filter rate: {page?.rateSource ?? `${cur.fs.toFixed(0)} Hz`}</Caption1>
         </div>
       </div>
-      {page && <PageView page={page} />}
+      {rest && <PageView page={rest} />}
     </div>
   );
 }

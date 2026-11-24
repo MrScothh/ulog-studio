@@ -2,8 +2,8 @@ import { useMemo, useState } from 'react';
 import {
   makeStyles, tokens, Table, TableHeader, TableRow, TableHeaderCell, TableBody, TableCell, SearchBox, Caption1, Text, Body1Strong, mergeClasses,
 } from '@fluentui/react-components';
-import { CheckmarkCircleFilled, WarningFilled, ErrorCircleFilled, InfoFilled, CircleFilled } from '@fluentui/react-icons';
-import type { PlotSpec, TableSpec, KVSpec, FindingsSpec, StatSpec, TextSpec, Tone } from '../core/types';
+import { CheckmarkCircleFilled, WarningFilled, ErrorCircleFilled, InfoFilled, CircleFilled, ArrowRightRegular } from '@fluentui/react-icons';
+import type { PlotSpec, TableSpec, KVSpec, FindingsSpec, StatSpec, TextSpec, FlowSpec, Tone } from '../core/types';
 import { TimePlot } from '../charts/TimePlot';
 import { FreqPlot } from '../charts/FreqPlot';
 import { XYPlot } from '../charts/XYPlot';
@@ -45,6 +45,21 @@ const useStyles = makeStyles({
   statValue: { fontSize: tokens.fontSizeBase500, fontWeight: tokens.fontWeightSemibold, fontVariantNumeric: 'tabular-nums', display: 'flex', alignItems: 'center', gap: '6px' },
   pre: { fontFamily: tokens.fontFamilyMonospace, fontSize: tokens.fontSizeBase200, whiteSpace: 'pre', overflow: 'auto', maxHeight: '320px', margin: 0, color: tokens.colorNeutralForeground2 },
   textTone: { padding: '10px 12px', borderRadius: tokens.borderRadiusMedium, backgroundColor: tokens.colorNeutralBackground2, display: 'flex', gap: '10px', alignItems: 'flex-start' },
+  textBody: { whiteSpace: 'pre-line', maxWidth: '120ch' },
+  lanes: { display: 'flex', flexDirection: 'column', gap: '10px' },
+  lane: { display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' },
+  laneLabel: { width: '92px', flexShrink: 0, color: tokens.colorNeutralForeground3, fontSize: tokens.fontSizeBase200, fontWeight: tokens.fontWeightSemibold },
+  steps: { display: 'flex', alignItems: 'stretch', gap: '6px', flexWrap: 'wrap', flexGrow: 1, minWidth: 0 },
+  stepWrap: { display: 'flex', alignItems: 'center', gap: '6px' },
+  step: {
+    display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '1px', padding: '6px 10px', minHeight: '40px',
+    borderRadius: tokens.borderRadiusMedium, border: `1px solid ${tokens.colorNeutralStroke2}`, backgroundColor: tokens.colorNeutralBackground2,
+  },
+  stepEnd: { backgroundColor: tokens.colorBrandBackground2, border: `1px solid ${tokens.colorBrandStroke2}` },
+  stepOff: { backgroundColor: 'transparent', border: `1px dashed ${tokens.colorNeutralStroke1}`, color: tokens.colorNeutralForeground3 },
+  stepTitle: { fontSize: tokens.fontSizeBase300, fontWeight: tokens.fontWeightSemibold, whiteSpace: 'nowrap' },
+  stepSub: { color: tokens.colorNeutralForeground3, fontSize: tokens.fontSizeBase200, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' },
+  arrow: { color: tokens.colorNeutralForeground4, flexShrink: 0 },
 });
 
 export function toneIcon(tone: Tone | undefined, className?: string) {
@@ -162,7 +177,43 @@ function TextView({ spec }: { spec: TextSpec }) {
       </section>
     );
   }
-  return <div className={s.textTone}>{toneIcon(spec.tone ?? 'info', s.fIcon)}<Text>{spec.text}</Text></div>;
+  return (
+    <div className={s.textTone}>
+      {toneIcon(spec.tone ?? 'info', s.fIcon)}
+      <div className={s.fText}>
+        {spec.title && <Body1Strong>{spec.title}</Body1Strong>}
+        <Text className={s.textBody}>{spec.text}</Text>
+      </div>
+    </div>
+  );
+}
+
+function FlowView({ spec }: { spec: FlowSpec }) {
+  const s = useStyles();
+  return (
+    <section className={s.panel} aria-label={spec.title}>
+      <div className={s.head}><span className={s.title}>{spec.title}</span></div>
+      <div className={s.lanes}>
+        {spec.lanes.map((lane, li) => (
+          <div key={li} className={s.lane}>
+            <span className={s.laneLabel}>{lane.label}</span>
+            <div className={s.steps}>
+              {lane.steps.map((st, i) => (
+                <div key={i} className={s.stepWrap}>
+                  {i > 0 && <ArrowRightRegular className={s.arrow} aria-hidden />}
+                  <div className={mergeClasses(s.step, (st.kind === 'source' || st.kind === 'sink') && s.stepEnd, st.kind === 'off' && s.stepOff)}>
+                    <span className={s.stepTitle}>{st.title}</span>
+                    {st.sub && <span className={s.stepSub}>{st.sub}</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+      {spec.note && <Caption1 className={s.note}>{spec.note}</Caption1>}
+    </section>
+  );
 }
 
 export function SpecItem({ spec }: { spec: PlotSpec }) {
@@ -179,11 +230,12 @@ export function SpecItem({ spec }: { spec: PlotSpec }) {
     case 'findings': return <FindingsView spec={spec} />;
     case 'stats': return <StatsView spec={spec} />;
     case 'text': return <TextView spec={spec} />;
+    case 'flow': return <FlowView spec={spec} />;
     default: return null;
   }
 }
 
 /** Items that look better side by side on wide screens. */
 export function isHalfWidth(spec: PlotSpec): boolean {
-  return spec.kind === 'kv' || spec.kind === 'bars' || spec.kind === 'map' || spec.kind === 'xy' || (spec.kind === 'freq' && !spec.id.startsWith('bode') && !spec.id.startsWith('step-plot') && !spec.id.startsWith('fft') && !spec.id.startsWith('filt'));
+  return spec.kind === 'kv' || spec.kind === 'bars' || spec.kind === 'map' || spec.kind === 'xy' || (spec.kind === 'freq' && !spec.id.startsWith('bode') && !spec.id.startsWith('step-plot') && !spec.id.startsWith('fft') && !spec.id.startsWith('filt') && !spec.id.startsWith('full-'));
 }

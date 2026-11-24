@@ -60,6 +60,7 @@ export function FreqPlot({ spec }: { spec: FreqPlotSpec }) {
           const c = seriesColor(t, s.color);
           const o: uPlot.Series = { label: s.label, stroke: c, width: s.width ?? 1.5, points: { show: false }, value: (_u: uPlot, v: number | null) => fmt(v) };
           if (s.dash) o.dash = [6, 4];
+          if (s.points) { o.paths = () => null; o.points = { show: true, size: 6, width: 1, stroke: c, fill: withAlpha(c, 0.35) }; }
           return o;
         }),
       ],

@@ -59,19 +59,23 @@ export function RateLoopPage({ log }: { log: LogSummary }) {
   const changed: [string, number][] = [];
   for (const a of AX) for (const k of ['k', 'p', 'i', 'd'] as const) if (gains[a][k] !== logged[a][k]) changed.push([`MC_${a.toUpperCase()}RATE_${k.toUpperCase()}`, gains[a][k]]);
   const useZoom = (a: Ax) => { const r = timeSync.get(log.id); if (r) setWindows({ ...windows, [a]: r }); };
+  const head = page ? { ...page, sections: page.sections.slice(0, 1) } : null;
+  const rest = page ? { ...page, sections: page.sections.slice(1) } : null;
   return (
     <div className={s.root}>
+      {head ? <PageView page={head} /> : <Spinner label="Identifying the airframe…" />}
       <div className={s.panel}>
-        <Subtitle2>Rate controller gains (what-if)</Subtitle2>
+        <Subtitle2>Try other gains</Subtitle2>
+        <Caption1 className={s.hint}>MC_*RATE_K multiplies P, I and D together. The margins above update with the values below; the airframe model stays the one identified on this flight. Nothing is sent to the vehicle.</Caption1>
         <div className={s.grid}>
           <span />
           {['K', 'P', 'I', 'D'].map((h) => <span key={h} className={s.head}>MC_*RATE_{h}</span>)}
-          <span className={s.head}>Identification window</span>
+          <span className={s.head}>Stick inputs used</span>
           {AX.map((a) => (
             <div key={a} style={{ display: 'contents' }}>
               <Body1Strong style={{ textTransform: 'capitalize' }}>{a}</Body1Strong>
               {(['k', 'p', 'i', 'd'] as const).map((k) => (
-                <Field key={k} size="small" hint={`log ${logged[a][k]}`}>
+                <Field key={k} size="small" hint={`flown ${logged[a][k]}`}>
                   <SpinButton size="small" value={gains[a][k]} step={k === 'd' ? 0.0002 : k === 'k' ? 0.05 : 0.01} min={0} max={10} precision={k === 'd' ? 4 : 3}
                     onChange={(_, d) => { const v = d.value ?? Number(d.displayValue); if (Number.isFinite(v)) setG(a, k)(v as number); }} />
                 </Field>
@@ -90,10 +94,9 @@ export function RateLoopPage({ log }: { log: LogSummary }) {
             <Button icon={<DocumentArrowDownRegular />} disabled={!changed.length} onClick={() => exportParams(changed, `${log.fileName.replace(/\.ulg$/i, '')}_rate_gains.params`)}>Export changed (.params)</Button>
           </Tooltip>
           {busy && <Spinner size="tiny" label="Computing…" />}
-          <Caption1 className={s.hint}>Margins are computed from the plant identified on this flight; edited gains and filters are applied on top.</Caption1>
         </div>
       </div>
-      {page && <PageView page={page} />}
+      {rest && <PageView page={rest} />}
     </div>
   );
 }

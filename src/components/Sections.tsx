@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { makeStyles, tokens, Subtitle2, Caption1, mergeClasses, Button, ToggleButton } from '@fluentui/react-components';
+import { useEffect, useState } from 'react';
+import { makeStyles, tokens, Subtitle2, Caption1, mergeClasses, Button } from '@fluentui/react-components';
 import { ChevronDownRegular, ChevronRightRegular } from '@fluentui/react-icons';
 import type { PageSpec, Section } from '../core/types';
 import { SpecItem, isHalfWidth } from './SpecRenderer';
@@ -24,8 +24,14 @@ const collapsedKey = (pageId: string, secId: string) => `collapsed:${pageId}:${s
 export function SectionView({ section, pageId }: { section: Section; pageId?: string }) {
   const s = useStyles();
   const key = pageId ? collapsedKey(pageId, section.id) : '';
-  const [collapsed, setCollapsed] = useState<boolean>(key ? prefs.get(key, false) : false);
+  const [collapsed, setCollapsed] = useState<boolean>(key ? prefs.get(key, section.collapsed ?? false) : section.collapsed ?? false);
   const toggle = () => { setCollapsed(!collapsed); if (key) prefs.set(key, !collapsed); };
+  // "Jump to" opens a collapsed section
+  useEffect(() => {
+    const on = (e: Event) => { if ((e as CustomEvent<string>).detail === section.id) setCollapsed(false); };
+    window.addEventListener('ulog-open-section', on);
+    return () => window.removeEventListener('ulog-open-section', on);
+  }, [section.id]);
   const charts = section.items.filter((i) => ['time', 'freq', 'xy', 'spectrogram', 'map', 'bars'].includes(i.kind)).length;
   return (
     <section id={`sec-${section.id}`} className={s.section}>
@@ -45,13 +51,12 @@ export function SectionView({ section, pageId }: { section: Section; pageId?: st
   );
 }
 
-/** Page = sections; with three or more sections a jump bar lets you go straight to one. */
+/** Page = sections; with three or more sections a "Jump to" bar scrolls straight to one (navigation, not a filter). */
 export function PageView({ page }: { page: PageSpec }) {
   const s = useStyles();
-  const [active, setActive] = useState<string | null>(null);
   const jump = (id: string) => {
-    setActive(id);
-    document.getElementById(`sec-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    window.dispatchEvent(new CustomEvent('ulog-open-section', { detail: id }));
+    requestAnimationFrame(() => document.getElementById(`sec-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
   };
   return (
     <div className={s.page}>
@@ -59,9 +64,8 @@ export function PageView({ page }: { page: PageSpec }) {
         <nav className={s.jump} aria-label="Sections">
           <Caption1 className={s.empty} style={{ marginRight: 4 }}>Jump to</Caption1>
           {page.sections.map((sec) => (
-            <ToggleButton key={sec.id} size="small" shape="circular" appearance="outline" checked={active === sec.id} onClick={() => jump(sec.id)}>{sec.title}</ToggleButton>
+            <Button key={sec.id} size="small" shape="circular" appearance="outline" onClick={() => jump(sec.id)}>{sec.title}</Button>
           ))}
-          <Button size="small" appearance="transparent" style={{ display: 'none' }} />
         </nav>
       )}
       {page.sections.map((sec) => <SectionView key={sec.id} section={sec} pageId={page.id} />)}

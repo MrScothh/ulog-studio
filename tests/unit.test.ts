@@ -1,7 +1,9 @@
 /** Unit tests that need no flight logs: a synthetic ULog file and DSP sanity checks. */
 import { describe, it, expect } from 'vitest';
 import { ULog } from '../src/core/ulog';
-import { welch, peakIn, px4Notch, lowpass2, biquadResponse, cabs, filtfilt, butterworth } from '../src/core/dsp';
+import { welch, peakIn, px4Notch, lowpass2, biquadResponse, cabs, carg, filtfilt, butterworth, alphaLpf, applyResponse, lfilter } from '../src/core/dsp';
+import { applyChain, chainResponse, FilterConfig } from '../src/core/analysis/filters';
+import { loopAt } from '../src/core/analysis/plantid';
 import { EventParser } from '../src/core/events';
 import { parseQgcParams, diffParams } from '../src/core/analysis/params';
 
@@ -68,6 +70,60 @@ describe('DSP', () => {
     const x = Float64Array.from({ length: 2000 }, (_, i) => Math.sin((2 * Math.PI * 2 * i) / fs));
     const y = filtfilt(butterworth(4, 30, fs), x);
     expect(Math.abs(y[1000] - x[1000])).toBeLessThan(0.01);
+  });
+});
+
+describe('PX4 gyro filter chain model', () => {
+  const cfg: FilterConfig = { fs: 2000, ctrlRate: 667, notches: [{ f: 42, bw: 20 }, { f: 0, bw: 20 }], lpf: 40, dlpf: 25 };
+  /** amplitude and phase (deg) of y at f, by projection over the second half of the signal */
+  const tone = (y: ArrayLike<number>, f: number, fs: number) => {
+    let c = 0, s = 0;
+    const n0 = Math.floor(y.length / 2);
+    for (let i = n0; i < y.length; i++) { const w = (2 * Math.PI * f * i) / fs; c += y[i] * Math.cos(w); s += y[i] * Math.sin(w); }
+    const n = y.length - n0;
+    return { amp: (2 * Math.hypot(c, s)) / n, ph: (Math.atan2(c, s) * 180) / Math.PI };
+  };
+  it('the time-domain chain matches its frequency response on the rate and D paths', () => {
+    const f = 10;
+    const x = Float64Array.from({ length: 8000 }, (_, i) => Math.sin((2 * Math.PI * f * i) / cfg.fs));
+    const { vel, acc } = applyChain(cfg, x);
+    const r = chainResponse(cfg, [f]);
+    const v = tone(vel, f, cfg.fs), a = tone(acc, f, cfg.fs);
+    expect(v.amp).toBeCloseTo(cabs(r.p[0]), 3);
+    expect(v.ph).toBeCloseTo((carg(r.p[0]) * 180) / Math.PI, 1);
+    // acc = d/dt of the filtered rate, then the D low-pass: |jω·H_d|, phase 90° + arg H_d
+    expect(a.amp / (2 * Math.PI * f)).toBeCloseTo(cabs(r.d[0]), 3);
+    expect(a.ph - 90).toBeCloseTo((carg(r.d[0]) * 180) / Math.PI, 1);
+    // the D path carries the rate-path filters plus its own: more lag
+    expect(carg(r.d[0])).toBeLessThan(carg(r.p[0]));
+  });
+  it('the D-term low-pass is first order (PX4 AlphaFilter)', () => {
+    const q = alphaLpf(25, 2000)!;
+    expect(20 * Math.log10(cabs(biquadResponse(q, 25, 2000)))).toBeCloseTo(-3, 0);
+    expect(20 * Math.log10(cabs(biquadResponse(q, 250, 2000)))).toBeGreaterThan(-21);
+    expect(alphaLpf(0, 2000)).toBeUndefined();
+    expect(alphaLpf(1200, 2000)).toBeUndefined();
+  });
+  it('FFT filtering by a response equals direct filtering', () => {
+    const fs = 500, q = lowpass2(30, fs);
+    const x = Float64Array.from({ length: 3000 }, (_, i) => Math.sin(i * 0.37) + Math.cos(i * 0.011) * ((i * 7919) % 13) / 13);
+    const a = applyResponse(x, fs, (f) => Array.from(f, (v) => biquadResponse(q, v, fs)));
+    const b = lfilter(q, x, false);
+    let err = 0;
+    for (let i = 0; i < x.length; i++) err = Math.max(err, Math.abs(a[i] - b[i]));
+    expect(err).toBeLessThan(1e-6);
+  });
+  it('margins of a delayed integrator loop match the closed form', () => {
+    // L = K e^(-sd) / s with K = 2π·5: crossover 5 Hz, PM = 90 − 360·5·d, phase crossover at 1/(4d), GM = 20·log10(1/(4d·5))
+    const d = 0.01;
+    const noFilters: FilterConfig = { fs: 8000, ctrlRate: 8000, notches: [], lpf: 0, dlpf: 0 };
+    const fit = { axis: 'roll' as const, K: 2 * Math.PI * 5, tau: 0, delay: d, r2: 1, t0: 0, t1: 1, fs: 8000, n: 1 };
+    const f = Float64Array.from({ length: 20000 }, (_, i) => 0.1 * 1.0005 ** i);
+    const m = loopAt(fit, { k: 1, p: 1, i: 0, d: 0 }, noFilters, {}, f).margins!;
+    expect(m.fc).toBeCloseTo(5, 1);
+    expect(m.pm).toBeCloseTo(72, 0);
+    expect(m.fGm).toBeCloseTo(25, 0);
+    expect(m.gm).toBeCloseTo(20 * Math.log10(5), 1);
   });
 });
 

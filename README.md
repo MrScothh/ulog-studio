@@ -27,8 +27,8 @@
 - **Multi-flight comparison** with identical metrics (vibration and oscillation measured on quiet hover only, hover thrust, motor imbalance, attitude error, dropouts, CPU) and overlaid spectra.
 - **Parameter diff** between logs and QGroundControl `.params` files (just drop them in).
 - **Quiet-hover PSD** — airborne, sticks centred, speed < 2.5 m/s, adaptive threshold.
-- **Gyro filters (`IMU_GYRO_*`)** — magnitude, phase and delay of the rate and D paths; **what-if replay** on the raw FIFO gyro (the PX4 filter chain sample by sample) with the noise each choice injects into the torque.
-- **Plant identification** from stick doublets (`α = K · lag(τ) · delay · torque`, R²) and **rate-loop margins** (phase/gain margin, crossover, peak sensitivity), Bode plots, measured closed loop, editable gains.
+- **Gyro filters (`IMU_GYRO_*`)** — the chain PX4 actually runs (dynamic and static notches, gyro low-pass, derivative, first-order D low-pass, at the raw rate of the gyro in use) drawn with the delay each filter adds; checks that every notch sits on a real vibration peak; **what-if replay** on the raw FIFO gyro with the noise each setting sends to the motors. The replay is checked against the log itself: PX4's own filtered rate and D-term input, and the logged torque command.
+- **Rate loop** — airframe identified from stick doublets (`α = K · e^(−s·d) / (τs + 1) · torque`, with the gyro filters modelled exactly) and **stability margins** in plain words (how much extra gain or delay before it oscillates, the `MC_*RATE_K` that would meet 45° / 6 dB), checked by comparing the predicted closed-loop response with the one measured in flight; Bode plots and editable gains.
 - **Aliasing warning** when a topic is logged below twice the vibration frequency (44 Hz logged at 50 Hz shows up as a fake 6 Hz oscillation).
 - **Motor imbalance** turned into a centre-of-gravity offset and a residual yaw torque using the `CA_ROTORn_*` geometry.
 - **Hover thrust normalised on battery voltage** and its drift over the flight.

@@ -297,6 +297,46 @@ export function px4Notch(f0: number, bw: number, fs: number): Biquad {
   return { b: [a0i, 2 * beta * a0i, a0i], a: [1, 2 * beta * a0i, (1 - alpha) * a0i] };
 }
 
+/**
+ * PX4 AlphaFilter (first-order low-pass, y += a·(x − y)) as set by setCutoffFreq(fs, fc):
+ * a = dt / (dt + 1/(2π·fc)). Used for the D-term filter (IMU_DGYRO_CUTOFF) and the yaw torque filter.
+ * Returns undefined when PX4 would leave the filter disabled (fc <= 0 or fc >= fs/2).
+ */
+export function alphaLpf(fc: number, fs: number): Biquad | undefined {
+  if (!(fc > 0) || !(fs > 0) || fc >= fs / 2) return undefined;
+  const dt = 1 / fs, a = dt / (dt + 1 / (2 * Math.PI * fc));
+  return { b: [a, 0, 0], a: [1, -(1 - a), 0] };
+}
+
+/**
+ * Filter x (sampled at fs) by an arbitrary frequency response, given at the FFT bin frequencies by H(f).
+ * Zero-padded to at least twice the length, so the result is a (causal) linear, not circular, convolution
+ * for responses whose impulse response is shorter than the signal.
+ */
+export function applyResponse(x: ArrayLike<number>, fs: number, H: (f: Float64Array) => Cplx[]): Float64Array {
+  const n = x.length, N = nextPow2(2 * n), fft = fftOf(N);
+  const buf = new Float64Array(N);
+  for (let i = 0; i < n; i++) buf[i] = x[i];
+  const X = fft.createComplexArray() as number[];
+  fft.realTransform(X, buf);
+  fft.completeSpectrum(X);
+  const nf = N / 2 + 1;
+  const f = new Float64Array(nf);
+  for (let k = 0; k < nf; k++) f[k] = (k * fs) / N;
+  const h = H(f);
+  for (let k = 0; k < N; k++) {
+    const kk = k < nf ? k : N - k;
+    const hr = h[kk].re, hi = k < nf ? h[kk].im : -h[kk].im;
+    const xr = X[2 * k], xi = X[2 * k + 1];
+    X[2 * k] = xr * hr - xi * hi; X[2 * k + 1] = xr * hi + xi * hr;
+  }
+  const y = fft.createComplexArray() as number[];
+  fft.inverseTransform(y, X);
+  const out = new Float64Array(n);
+  for (let i = 0; i < n; i++) out[i] = y[2 * i];
+  return out;
+}
+
 /** Direct-form filtering (with steady-state init from first sample). */
 export function lfilter(q: Biquad, x: ArrayLike<number>, init = true): Float64Array {
   const y = new Float64Array(x.length);

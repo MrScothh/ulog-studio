@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.1.7 — 2026-11-25
+
+Gyro filters and Rate loop checked line by line against the PX4 source (v1.17 to main) and corrected.
+
+- **D-term filter model fixed.** PX4 takes the derivative *after* the gyro low-pass and filters it with a first-order AlphaFilter (`IMU_DGYRO_CUTOFF`). The model differentiated the notched signal before the low-pass and used a second-order filter, so it understated the D-path delay (≈ 9 ms instead of ≈ 15 ms at 10 Hz on a 40/25 Hz setup) and overstated the margins (roll 47° → 38°, gain margin 5.5 → 4.0 dB on the reference flight).
+- **Filter rate from the gyro in use.** The rate now comes from the `vehicle_imu_status` instance of the gyro selected by `sensor_selection` (as `VehicleAngularVelocity` does), not from the first IMU; the raw FIFO replay uses that gyro's FIFO.
+- **Rate loop model.** The gyro filters are part of the identification (no more division by the notch response, which blew up near the notches when they were edited); yaw includes the `MC_YAW_TQ_CUTOFF` torque low-pass; `MC_*RATE_FF` is in the closed-loop prediction; fractional delays in the fit.
+- **Dynamic notches**: ESC-RPM notches modelled at hover RPM with PX4's harmonic and minimum-frequency rules; FFT notches at the median logged peaks; a note when `IMU_GYRO_DNF_EN` asks for the FFT notch but the firmware has no `gyro_fft` module.
+- **Checks against the log itself**: the replayed chain is compared sample by sample with PX4's own filtered rate and D-term input (`vehicle_angular_velocity.xyz_derivative`) and with the logged torque command; the rate-loop model is compared with the closed-loop response measured in flight.
+- **Both pages rewritten for clarity**: the filter chain drawn with the delay each filter adds, a check per notch (is it on a vibration peak, how many dB it removes), noise sent to the motors in % of full torque; rate-loop verdict in plain words (gain and delay that would make it oscillate, `MC_*RATE_K` for 45° / 6 dB); advanced plots collapsed.
+- "Jump to" chips are plain navigation buttons (they no longer stay selected) and open a collapsed section.
+- Default `IMU_DGYRO_CUTOFF` when missing from the log is 20 Hz (PX4 default).
+
 ## 0.1.6 — 2026-11-24
 
 - Altitude estimate: downward-facing rangefinder (lidar) added as distance + home altitude, only valid readings, line broken where readings are missing.

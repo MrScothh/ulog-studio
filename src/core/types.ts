@@ -28,7 +28,7 @@ export interface TimePlotSpec {
   noModes?: boolean;
 }
 
-export interface FreqSeries { label: string; y: Num; color?: number; dash?: boolean; width?: number }
+export interface FreqSeries { label: string; y: Num; color?: number; dash?: boolean; width?: number; points?: boolean }
 export interface FreqPlotSpec {
   kind: 'freq';
   id: string;
@@ -123,11 +123,15 @@ export interface ReplaySpec {
   hdg: Num; // [deg]
 }
 
+/** Signal chain drawn as lanes of boxes joined by arrows (e.g. the gyro filter chain). */
+export interface FlowStep { title: string; sub?: string; kind?: 'source' | 'filter' | 'sink' | 'off' }
+export interface FlowSpec { kind: 'flow'; id: string; title: string; lanes: { label: string; steps: FlowStep[] }[]; note?: string }
+
 export interface StatSpec { kind: 'stats'; id: string; items: { label: string; value: string; sub?: string; tone?: Tone }[] }
 
-export type PlotSpec = TimePlotSpec | FreqPlotSpec | XYPlotSpec | SpectrogramSpec | TableSpec | KVSpec | FindingsSpec | TextSpec | MapSpec | StatSpec | BarSpec | ReplaySpec;
+export type PlotSpec = TimePlotSpec | FreqPlotSpec | XYPlotSpec | SpectrogramSpec | TableSpec | KVSpec | FindingsSpec | TextSpec | MapSpec | StatSpec | BarSpec | ReplaySpec | FlowSpec;
 
-export interface Section { id: string; title: string; description?: string; items: PlotSpec[] }
+export interface Section { id: string; title: string; description?: string; items: PlotSpec[]; /** start collapsed (advanced details) */ collapsed?: boolean }
 export interface PageSpec { id: string; sections: Section[] }
 
 export interface ModeSegment { t0: number; t1: number; mode: number; name: string; color: string }

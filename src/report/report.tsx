@@ -54,7 +54,9 @@ function itemHtml(it: PlotSpec, img: Map<string, string>): string {
     case 'stats':
       return `<div class="stats">${it.items.map((x) => `<div class="stat ${x.tone ?? ''}"><span class="muted">${esc(x.label)}</span><b>${esc(x.value)}</b>${x.sub ? `<span class="muted">${esc(x.sub)}</span>` : ''}</div>`).join('')}</div>`;
     case 'text':
-      return it.mono ? `<figure><figcaption>${esc(it.title ?? '')}</figcaption><pre>${esc(it.text)}</pre></figure>` : `<p class="note ${it.tone ?? ''}">${esc(it.text)}</p>`;
+      return it.mono ? `<figure><figcaption>${esc(it.title ?? '')}</figcaption><pre>${esc(it.text)}</pre></figure>` : `<p class="note ${it.tone ?? ''}" style="white-space:pre-line">${it.title ? `<b>${esc(it.title)}</b><br>` : ''}${esc(it.text)}</p>`;
+    case 'flow':
+      return `<figure><figcaption>${esc(it.title)}</figcaption>${it.lanes.map((l) => `<p><b>${esc(l.label)}:</b> ${l.steps.map((st) => `${esc(st.title)}${st.sub ? ` <span class="muted">(${esc(st.sub)})</span>` : ''}`).join(' → ')}</p>`).join('')}${it.note ? `<p class="muted">${esc(it.note)}</p>` : ''}</figure>`;
     default: return '';
   }
 }
