@@ -24,11 +24,11 @@ export function positionXY(log: ULog): XYPlotSpec | undefined {
 export function gpsMap(log: ULog): MapSpec | undefined {
   const g = gnssTopic(log);
   const gp = log.topic('vehicle_global_position');
-  let lat: Float64Array | undefined, lon: Float64Array | undefined, t: Float64Array | undefined;
-  if (gp && gp.cols['lat'] && maxAbs(gp.cols['lat']) > 0) { lat = gp.cols['lat']; lon = gp.cols['lon']; t = gp.t; }
+  let lat: Float64Array | undefined, lon: Float64Array | undefined, t: Float64Array | undefined, alt: Float64Array | undefined;
+  if (gp && gp.cols['lat'] && maxAbs(gp.cols['lat']) > 0) { lat = gp.cols['lat']; lon = gp.cols['lon']; t = gp.t; alt = gp.cols['alt']; }
   else if (g) {
     const d = log.topic(g)!;
-    if (d.cols['latitude_deg']) { lat = d.cols['latitude_deg']; lon = d.cols['longitude_deg']; t = d.t; }
+    if (d.cols['latitude_deg']) { lat = d.cols['latitude_deg']; lon = d.cols['longitude_deg']; t = d.t; alt = d.cols['altitude_msl_m']; }
   }
   if (!lat || !lon || !t) return undefined;
   const keep: number[] = [];
@@ -50,11 +50,17 @@ export function gpsMap(log: ULog): MapSpec | undefined {
   if (!segments.length) segments.push({ i0: 0, i1: tt.length - 1, mode: -1 });
   const home = log.topic('home_position');
   let h: [number, number] | undefined;
+  let homeAlt: number | undefined;
   if (home && home.cols['lat'] && home.count) {
     const i = home.count - 1;
-    if (home.cols['lat'][i] !== 0) h = [home.cols['lat'][i], home.cols['lon'][i]];
+    if (home.cols['lat'][i] !== 0) { h = [home.cols['lat'][i], home.cols['lon'][i]]; homeAlt = home.cols['alt']?.[i]; }
   }
-  return { kind: 'map', id: 'map', title: 'Trajectory', lat: la, lon: lo, t: tt, segments, home: h };
+  let rel: Float32Array | undefined;
+  if (alt) {
+    const ref = homeAlt !== undefined && isFinite(homeAlt) ? homeAlt : alt[keep[0]];
+    rel = Float32Array.from(keep, (i) => alt![i] - ref);
+  }
+  return { kind: 'map', id: 'map', title: 'Trajectory', lat: la, lon: lo, t: tt, alt: rel, segments, home: h };
 }
 
 export function altitude(log: ULog): TimePlotSpec | undefined {

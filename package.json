@@ -1,7 +1,7 @@
 {
   "name": "ulog-studio",
   "private": true,
-  "version": "0.1.2",
+  "version": "0.1.3",
   "type": "module",
   "description": "Offline PX4 ULog flight log analyzer: Flight Review plots plus tuning analyses, as a Windows app and an offline web app",
   "license": "BSD-3-Clause",

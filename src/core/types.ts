@@ -99,6 +99,8 @@ export interface MapSpec {
   lat: Num;
   lon: Num;
   t: Num;
+  /** height above home / takeoff [m], same samples as lat/lon */
+  alt?: Num;
   home?: [number, number];
   segments: { i0: number; i1: number; mode: number }[];
 }

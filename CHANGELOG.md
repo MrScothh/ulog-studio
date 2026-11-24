@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.3 — 2026-11-24
+
+- Map: satellite basemap (Esri World Imagery) next to offline and OpenStreetMap; the choice is remembered. Online basemaps stay opt-in.
+- Map: the track follows the timeline zoom (selected stretch highlighted, fit button), the flight cursor shows time, mode and height, taller-map toggle, legend.
+- Map fixes: tiles no longer spill outside the map when a basemap is switched on, the map stays below the sticky header while scrolling, the plain mouse wheel scrolls the page (Ctrl+wheel zooms), crisp scale bar, no flag in the attribution.
+- Timeline: the cursor label sits on the time axis and no longer covers the zoom button.
+
 ## 0.1.2 — 2026-11-24
 
 - Parameters: rows are marked as "not the airframe default" only when the log carries airframe defaults (as Flight Review does); calmer row markers in tables.

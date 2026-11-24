@@ -29,7 +29,7 @@ const useStyles = makeStyles({
   brushDim: { position: 'absolute', backgroundColor: 'rgba(0,0,0,0.28)', pointerEvents: 'none' },
   brush: { position: 'absolute', border: `2px solid ${tokens.colorBrandStroke1}`, borderRadius: tokens.borderRadiusMedium, pointerEvents: 'none', boxSizing: 'border-box' },
   cursor: { position: 'absolute', width: '2px', marginLeft: '-1px', backgroundColor: tokens.colorNeutralForeground1, pointerEvents: 'none', borderRadius: '1px' },
-  bubble: { position: 'absolute', top: '-2px', transform: 'translate(-50%, -100%)', padding: '1px 6px', borderRadius: tokens.borderRadiusSmall, backgroundColor: tokens.colorNeutralForeground1, color: tokens.colorNeutralBackground1, fontSize: '11px', fontWeight: tokens.fontWeightSemibold, whiteSpace: 'nowrap', pointerEvents: 'none', fontVariantNumeric: 'tabular-nums', zIndex: 2 },
+  bubble: { position: 'absolute', transform: 'translate(-50%, 0)', padding: '1px 6px', borderRadius: tokens.borderRadiusSmall, backgroundColor: tokens.colorNeutralForeground1, color: tokens.colorNeutralBackground1, fontSize: '11px', fontWeight: tokens.fontWeightSemibold, whiteSpace: 'nowrap', pointerEvents: 'none', fontVariantNumeric: 'tabular-nums', zIndex: 2 },
   list: { maxHeight: '180px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1px', borderTop: `1px solid ${tokens.colorNeutralStroke2}`, paddingTop: '4px' },
   row: { display: 'grid', gridTemplateColumns: '58px 20px 1fr', alignItems: 'center', gap: '6px', padding: '3px 6px', borderRadius: tokens.borderRadiusMedium, cursor: 'pointer', fontSize: tokens.fontSizeBase200, ':hover': { backgroundColor: tokens.colorNeutralBackground1Hover } },
   rowTime: { color: tokens.colorNeutralForeground3, fontVariantNumeric: 'tabular-nums' },
@@ -166,7 +166,7 @@ export function FlightTimeline({ log, title }: { log: LogSummary; title?: React.
         {cur != null && cur >= t0 && cur <= t1 && (
           <>
             <div className={s.cursor} style={{ left: x(cur), top: -2, height: Y_AXIS }} />
-            <div className={s.bubble} style={{ left: Math.min(LANE_X + w - 40, Math.max(LANE_X + 40, x(cur))) }}>{fmtTime(cur)}{curMode ? ` · ${curMode.name}` : ''}</div>
+            <div className={s.bubble} style={{ top: Y_AXIS - 2, left: Math.min(LANE_X + w - 60, Math.max(LANE_X + 60, x(cur))) }}>{fmtTime(cur)}{curMode ? ` · ${curMode.name}` : ''}</div>
           </>
         )}
       </div>
