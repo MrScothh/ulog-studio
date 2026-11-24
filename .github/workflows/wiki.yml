@@ -33,7 +33,9 @@ jobs:
           for f in docs/*.md; do
             name=$(basename "$f")
             [ "$name" = "README.md" ] && continue
-            sed -E 's/\]\(([A-Za-z0-9_-]+)\.md(#[^)]*)?\)/](\1\2)/g' "$f" > "wiki/$name"
+            # the wiki shows the page name as title: drop the leading "# Title" (kept on Home)
+            if [ "$name" = "Home.md" ]; then cat "$f"; else awk 'NR==1 && /^# / {skip=1; next} skip==1 && /^$/ {skip=0; next} {skip=0; print}' "$f"; fi \
+              | sed -E 's/\]\(([A-Za-z0-9_-]+)\.md(#[^)]*)?\)/](\1\2)/g' > "wiki/$name"
           done
           cd wiki
           git config user.name "github-actions[bot]"
