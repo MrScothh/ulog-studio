@@ -2,7 +2,7 @@ import iconUrl from '../assets/icon.svg';
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import {
   FluentProvider, webLightTheme, webDarkTheme, makeStyles, tokens, Button, Tooltip, Tab, TabList, Menu, MenuTrigger, MenuPopover, MenuList, MenuItemRadio,
-  NavDrawer, NavDrawerBody, NavItem, NavSectionHeader, NavDivider, Hamburger, Title3, Caption1, Badge, MessageBar, MessageBarBody, MessageBarActions, Spinner, Subtitle1, Body1, Switch, Text,
+  NavDrawer, NavDrawerBody, NavItem, NavSectionHeader, NavDivider, Hamburger, Title3, Caption1, Badge, MessageBar, MessageBarBody, MessageBarActions, Spinner, Subtitle1, Body1, Switch, Text, mergeClasses,
 } from '@fluentui/react-components';
 import {
   FolderOpenRegular, DismissRegular, WeatherMoonRegular, WeatherSunnyRegular, DesktopRegular, DocumentArrowDownRegular,
@@ -52,6 +52,11 @@ const useStyles = makeStyles({
   right: { display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 },
   body: { flexGrow: 1, display: 'flex', minHeight: 0 },
   nav: { height: '100%', borderRight: `1px solid ${tokens.colorNeutralStroke2}` },
+  // compact icon rail for narrow windows (the full menu opens from the hamburger)
+  rail: { width: '52px', flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', padding: '8px 0', overflowY: 'auto', borderRight: `1px solid ${tokens.colorNeutralStroke2}`, backgroundColor: tokens.colorNeutralBackground2 },
+  railSep: { width: '28px', height: '1px', backgroundColor: tokens.colorNeutralStroke2, margin: '4px 0' },
+  railBtn: { minWidth: '40px', width: '40px', height: '36px', position: 'relative' },
+  railOn: { backgroundColor: tokens.colorSubtleBackgroundSelected, '::before': { content: '""', position: 'absolute', left: '-6px', top: '9px', bottom: '9px', width: '3px', borderRadius: '2px', backgroundColor: tokens.colorCompoundBrandStroke } },
   main: { flexGrow: 1, minWidth: 0, overflowY: 'auto', overflowX: 'hidden', scrollbarGutter: 'stable' },
   mainInner: { maxWidth: '1680px', margin: '0 auto', padding: '16px 24px 48px 24px', display: 'flex', flexDirection: 'column', gap: '16px' },
   header: { display: 'flex', flexDirection: 'column', gap: '10px', position: 'sticky', top: 0, zIndex: 5, backgroundColor: tokens.colorNeutralBackground2, padding: '12px 0 10px 0', marginTop: '-16px' },
@@ -186,6 +191,20 @@ export function App() {
           </div>
         </header>
         <div className={s.body}>
+          {(logs.length > 0 || paramFiles.length > 0) && narrow && !overlayOpen && (
+            <nav className={s.rail} aria-label="Sections">
+              {['Flight', 'Tuning', 'Data', 'Multiple logs'].map((g, gi) => (
+                <div key={g} style={{ display: 'contents' }}>
+                  {gi > 0 && <div className={s.railSep} />}
+                  {PAGES.filter((p) => p.group === g).map((p) => (
+                    <Tooltip key={p.key} content={p.label} relationship="label" positioning="after">
+                      <Button appearance="subtle" icon={p.icon} className={mergeClasses(s.railBtn, page === p.key && s.railOn)} aria-current={page === p.key ? 'page' : undefined} onClick={() => store.set({ page: p.key })} />
+                    </Tooltip>
+                  ))}
+                </div>
+              ))}
+            </nav>
+          )}
           {(logs.length > 0 || paramFiles.length > 0) && (
             <NavDrawer open={navVisible} type={narrow ? 'overlay' : 'inline'} onOpenChange={(_, d) => { if (narrow) setOverlayOpen(d.open); }} surfaceMotion={narrow ? undefined : null}
               selectedValue={page} onNavItemSelect={(_, d) => { store.set({ page: d.value as PageKey }); if (narrow) setOverlayOpen(false); }} className={s.nav} size="small">

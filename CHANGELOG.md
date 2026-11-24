@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.5 — 2026-11-24
+
+- Narrow windows: the sections stay visible as a compact icon rail (labels on hover) instead of being hidden behind the menu button; the menu button still opens the full list.
+
 ## 0.1.4 — 2026-11-24
 
 - Flight replay (Overview › Trajectory & replay): play/pause, 1–20× speed, position slider; the drone (heading arrow, 15 s trail) moves on the map and on the top view, the map can follow it, the timeline cursor follows; live mode, height, ground speed, climb rate and heading.
