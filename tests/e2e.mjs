@@ -2,6 +2,7 @@
  * End-to-end check of the web builds with a real browser (local Chrome/Edge via playwright-core, temporary profile).
  *   node tests/e2e.mjs single <log.ulg> [outDir]   -> dist-single/index.html opened from file://
  *   node tests/e2e.mjs pwa    <log.ulg> [outDir]   -> dist-web served on localhost, then reloaded OFFLINE from the service worker
+ *   E2E_URL=https://… node tests/e2e.mjs url <log.ulg>  -> same, against a deployed copy
  * Logs stay local: they are handed to the page through a file input, nothing leaves the machine.
  */
 import { chromium } from 'playwright-core';
@@ -44,13 +45,14 @@ try {
   if (mode === 'single') {
     await page.goto(pathToFileURL(resolve('dist-single/index.html')).href);
   } else {
-    srv = await serve(resolve('dist-web'));
-    const url = `http://127.0.0.1:${srv.address().port}/`;
+    // pwa: local dist-web; url: a deployed copy (E2E_URL), e.g. the GitHub Pages site
+    let url = process.env.E2E_URL;
+    if (mode !== 'url' || !url) { srv = await serve(resolve('dist-web')); url = `http://127.0.0.1:${srv.address().port}/`; }
     await page.goto(url);
     await page.evaluate(async () => { await navigator.serviceWorker.ready; });
     await page.reload();
     await page.waitForFunction(() => !!navigator.serviceWorker.controller, null, { timeout: 15000 });
-    srv.close(); srv = undefined;
+    srv?.close(); srv = undefined;
     await context.setOffline(true);
     await page.reload();
     console.log('PWA reloaded offline from the service worker cache');
