@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.1 — 2026-11-24
+
+- Narrow windows (e.g. 150 % display scaling on a laptop): the navigation turns into an overlay so charts keep their width.
+
 ## 0.1.0 — 2026-11-24
 
 First release.

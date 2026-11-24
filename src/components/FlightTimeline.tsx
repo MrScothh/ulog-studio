@@ -146,7 +146,7 @@ export function FlightTimeline({ log, title }: { log: LogSummary; title?: React.
         <div className={s.alertLane} style={{ top: Y_ALERT, left: 0, width: LANE_X + w }}>
           {log.alerts.filter((a) => a.severity !== 'info' || a.kind === 'param').map((a, i) => (
             <Tooltip key={i} relationship="description" content={`${fmtTime(a.t)} · ${a.text}`}>
-              <div className={s.mark} style={{ left: x(a.t) }} onPointerDown={(e) => e.stopPropagation()} onClick={() => { zoomTo(a.t - 10, a.t + 10); cursorSync.set(a.t, 'ext'); }}>
+              <div className={s.mark} style={{ left: Math.max(LANE_X + 5, x(a.t)) }} onPointerDown={(e) => e.stopPropagation()} onClick={() => { zoomTo(a.t - 10, a.t + 10); cursorSync.set(a.t, 'ext'); }}>
                 <div className={s.dot} style={{ backgroundColor: a.kind === 'param' ? tokens.colorBrandForeground1 : SEV_COLOR[a.severity] }} />
               </div>
             </Tooltip>

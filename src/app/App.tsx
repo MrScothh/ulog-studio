@@ -63,6 +63,19 @@ const useStyles = makeStyles({
   loading: { display: 'flex', flexDirection: 'column', gap: '6px' },
 });
 
+function useNarrow(): boolean {
+  const q = '(max-width: 1100px)';
+  const [n, setN] = useState(() => window.matchMedia?.(q).matches ?? false);
+  useEffect(() => {
+    const m = window.matchMedia?.(q);
+    if (!m) return;
+    const f = () => setN(m.matches);
+    m.addEventListener('change', f);
+    return () => m.removeEventListener('change', f);
+  }, []);
+  return n;
+}
+
 function useSystemDark(): boolean {
   const [d, setD] = useState(() => window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false);
   useEffect(() => {
@@ -93,6 +106,10 @@ export function App() {
   const showParamChanges = useStore((x) => x.showParamChanges);
   const paramFiles = useStore((x) => x.paramFiles);
   const active = logs.find((l) => l.id === activeId);
+  // narrow windows (e.g. 150 % scaling on a laptop): the navigation becomes an overlay so charts keep the width
+  const narrow = useNarrow();
+  const [overlayOpen, setOverlayOpen] = useState(false);
+  const navVisible = narrow ? overlayOpen : navOpen;
   const [dragging, setDragging] = useState(false);
   const [reportBusy, setReportBusy] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -127,7 +144,7 @@ export function App() {
         onDragOver={(e) => { if (e.dataTransfer.types.includes('Files')) e.preventDefault(); }}
         onDrop={onDrop}>
         <header className={s.top}>
-          <Hamburger onClick={() => setNavOpen(!navOpen)} aria-label="Toggle navigation" />
+          <Hamburger onClick={() => (narrow ? setOverlayOpen(!overlayOpen) : setNavOpen(!navOpen))} aria-label="Toggle navigation" />
           <div className={s.brand}><img src={iconUrl} width={20} height={20} alt="" />ULog Studio</div>
           <Tooltip content="Open .ulg logs or QGroundControl .params files (or drop them anywhere)" relationship="description">
             <Button appearance="primary" icon={<FolderOpenRegular />} onClick={() => fileInput.current?.click()}>Open</Button>
@@ -170,7 +187,8 @@ export function App() {
         </header>
         <div className={s.body}>
           {(logs.length > 0 || paramFiles.length > 0) && (
-            <NavDrawer open={navOpen} type="inline" surfaceMotion={null} selectedValue={page} onNavItemSelect={(_, d) => store.set({ page: d.value as PageKey })} className={s.nav} size="small">
+            <NavDrawer open={navVisible} type={narrow ? 'overlay' : 'inline'} onOpenChange={(_, d) => { if (narrow) setOverlayOpen(d.open); }} surfaceMotion={narrow ? undefined : null}
+              selectedValue={page} onNavItemSelect={(_, d) => { store.set({ page: d.value as PageKey }); if (narrow) setOverlayOpen(false); }} className={s.nav} size="small">
               <NavDrawerBody>
                 {['Flight', 'Tuning', 'Data', 'Multiple logs'].map((g, gi) => (
                   <div key={g}>
