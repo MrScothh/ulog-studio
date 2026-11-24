@@ -26,8 +26,10 @@ if (!/^[\w.-]+\/[\w.-]+$/.test(repo)) { console.error('Missing --repo owner/name
 const version = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version;
 const tag = `v${version}`;
 const notes = opt('notes', `ULog Studio ${version}`);
-const run = (cmd, a, env = {}) => execFileSync(cmd, a, { cwd: root, stdio: 'inherit', shell: process.platform === 'win32', env: { ...process.env, ...env } });
-const out = (cmd, a) => execFileSync(cmd, a, { cwd: root, encoding: 'utf8', shell: process.platform === 'win32' });
+// npm/npx are .cmd shims on Windows and need a shell; everything else (gh, powershell) is run directly so arguments keep their spaces
+const needsShell = (cmd) => process.platform === 'win32' && (cmd === 'npm' || cmd === 'npx');
+const run = (cmd, a, env = {}) => execFileSync(cmd, a, { cwd: root, stdio: 'inherit', shell: needsShell(cmd), env: { ...process.env, ...env } });
+const out = (cmd, a) => execFileSync(cmd, a, { cwd: root, encoding: 'utf8', shell: needsShell(cmd), stdio: ['ignore', 'pipe', 'pipe'] });
 
 writeFileSync(join(root, 'update-repo.txt'), `${repo}\n`);
 try { out('gh', ['release', 'view', tag, '--repo', repo]); console.error(`Release ${tag} already exists: bump the version in package.json first.`); process.exit(1); } catch { /* ok, does not exist */ }
@@ -60,7 +62,7 @@ const zip = join(rel, `ULog-Studio-web-${version}.zip`);
 run('powershell', ['-NoProfile', '-Command', `Compress-Archive -Path '${join(root, 'dist-web')}\\*' -DestinationPath '${zip}' -Force`]);
 
 // 1) create the release with the binaries
-run('gh', ['release', 'create', tag, '--repo', repo, '--title', `ULog Studio ${version}`, '--notes', JSON.stringify(notes),
+run('gh', ['release', 'create', tag, '--repo', repo, '--title', `ULog Studio ${version}`, '--notes', notes,
   ...(flag('draft') ? ['--draft'] : []), join(rel, setupName), join(rel, `${setupName}.sig`), join(rel, `ULog-Studio-${version}.html`), zip]);
 
 // 2) updater manifest pointing at the installer's API URL (works for private repos with a token)
