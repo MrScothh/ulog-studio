@@ -428,7 +428,7 @@ export function paramsPage(log: ULog): PageSpec {
   return {
     id: 'params',
     sections: [
-      sec('nondefault', 'Non-default parameters', [{ kind: 'table', id: 'nondef', title: `${nd.length} non-default parameters (except RC and sensor calibration)`, columns: ['Name', 'Value', 'Default', 'Frame default', 'Min', 'Max', 'Description'], rows: nd.map((r) => [r.name, fmtParam(r.name, r.value), r.def !== undefined ? fmtParam(r.name, r.def) : '', r.frameDef !== undefined ? fmtParam(r.name, r.frameDef) : '', r.min ?? '', r.max ?? '', r.desc]), rowTone: nd.map((r) => (r.notFrameDefault ? 'warning' : undefined)), searchable: true, maxHeight: 480, note: 'Highlighted: differs from the airframe default. Defaults from the log (PX4 default-parameter messages) or bundled metadata.' }]),
+      sec('nondefault', 'Non-default parameters', [{ kind: 'table', id: 'nondef', title: `${nd.length} non-default parameters (except RC and sensor calibration)`, columns: ['Name', 'Value', 'Default', 'Frame default', 'Min', 'Max', 'Description'], rows: nd.map((r) => [r.name, fmtParam(r.name, r.value), r.def !== undefined ? fmtParam(r.name, r.def) : '', r.frameDef !== undefined ? fmtParam(r.name, r.frameDef) : '', r.min ?? '', r.max ?? '', r.desc]), rowTone: nd.map((r) => (r.notFrameDefault ? 'warning' : undefined)), searchable: true, maxHeight: 480, note: 'Marked rows differ from the airframe default (when the log carries airframe defaults). Defaults come from the log or from the bundled PX4 metadata.' }]),
       sec('inflight', 'Changed during the log', [changed.length ? { kind: 'table', id: 'chg', title: `${changed.length} changes`, columns: ['Time [s]', 'Name', 'Value'], rows: changed.map((c) => [c.t.toFixed(2), c.name, fmtParam(c.name, c.value)]) } : { kind: 'text', id: 'nochg', text: 'No parameter changes during the log.' }]),
       sec('all', 'All parameters', [{ kind: 'table', id: 'allp', title: `${all.length} parameters`, columns: ['Name', 'Value', 'Group', 'Description'], rows: all.map(([n, v]) => [n, fmtParam(n, v), PARAM_META[n]?.g ?? '', PARAM_META[n]?.s ?? '']), searchable: true, maxHeight: 520 }]),
     ],
@@ -437,7 +437,8 @@ export function paramsPage(log: ULog): PageSpec {
 
 export function messagesPage(log: ULog, events: DecodedEvent[], source: string): PageSpec {
   const rows: { t: number; level: number; src: string; msg: string; desc: string }[] = [];
-  for (const e of events) rows.push({ t: e.t, level: e.level, src: 'event', msg: e.message, desc: e.description });
+  // PROTOCOL-level events (health/arming summaries) carry no readable message: hidden like QGroundControl does
+  for (const e of events) if (e.level < 8) rows.push({ t: e.t, level: e.level, src: 'event', msg: e.message, desc: e.description });
   for (const m of log.logs) if (!m.message.endsWith('\t')) rows.push({ t: m.t, level: m.level, src: 'log', msg: m.message, desc: '' });
   rows.sort((a, b) => a.t - b.t);
   const tone = (l: number): Tone | undefined => (l <= 3 ? 'danger' : l === 4 ? 'warning' : undefined);

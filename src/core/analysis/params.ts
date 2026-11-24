@@ -63,6 +63,8 @@ export function diffParams(sets: ParamSet[], opts: { includeMissing?: boolean; i
 /** Non-default parameters (Flight Review semantics: defaults from the log's 'Q' messages, fallback to bundled metadata). */
 export function nonDefaultParams(log: ULog): { name: string; value: number; def?: number; frameDef?: number; min?: number; max?: number; desc: string; notFrameDefault: boolean }[] {
   const out = [];
+  // like Flight Review: "not the airframe default" is only meaningful when the log carries airframe defaults
+  const hasFrameDefaults = [...log.defaultParams.values()].some((d) => d.airframe !== undefined);
   for (const [name, value] of [...log.params.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
     if (name.startsWith('RC') || name.startsWith('CAL_')) continue;
     const meta = PARAM_META[name];
@@ -71,10 +73,11 @@ export function nonDefaultParams(log: ULog): { name: string; value: number; def?
     const frame = ld?.airframe ?? sys;
     if (sys !== undefined && eq(sys, value) && (frame === undefined || eq(frame, value))) continue;
     if (sys === undefined && !meta) {
-      out.push({ name, value, desc: '(unknown)', notFrameDefault: true });
+      out.push({ name, value, desc: '', notFrameDefault: false });
       continue;
     }
-    out.push({ name, value, def: sys, frameDef: frame, min: meta?.min, max: meta?.max, desc: meta?.s ?? '', notFrameDefault: frame === undefined || !eq(frame, value) });
+    const notFrame = hasFrameDefaults && ld?.airframe !== undefined && !eq(ld.airframe, value);
+    out.push({ name, value, def: sys, frameDef: hasFrameDefaults ? frame : undefined, min: meta?.min, max: meta?.max, desc: meta?.s ?? '', notFrameDefault: notFrame });
   }
   return out.filter((r) => r.def === undefined || !eq(r.def, r.value) || r.notFrameDefault);
 }
