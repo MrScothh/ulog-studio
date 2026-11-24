@@ -51,7 +51,7 @@ const useStyles = makeStyles({
   tabClose: { minWidth: '20px', height: '20px', padding: 0 },
   right: { display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 },
   body: { flexGrow: 1, display: 'flex', minHeight: 0 },
-  nav: { height: '100%', borderRight: `1px solid ${tokens.colorNeutralStroke2}` },
+  nav: { height: '100%', borderRight: `1px solid ${tokens.colorNeutralStroke2}`, width: '240px', minWidth: '240px', flexShrink: 0 },
   // compact icon rail for narrow windows (the full menu opens from the hamburger)
   rail: { width: '52px', flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', padding: '8px 0', overflowY: 'auto', borderRight: `1px solid ${tokens.colorNeutralStroke2}`, backgroundColor: tokens.colorNeutralBackground2 },
   railSep: { width: '28px', height: '1px', backgroundColor: tokens.colorNeutralStroke2, margin: '4px 0' },

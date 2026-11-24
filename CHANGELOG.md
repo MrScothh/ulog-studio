@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.8 — 2026-11-25
+
+- The navigation pane keeps a fixed width: it no longer widened while a page was still computing (visible on the Gyro filters and Rate loop pages).
+- Documentation: user guide and wiki (`docs/`), issue forms, security policy, code of conduct, support page.
+
 ## 0.1.7 — 2026-11-25
 
 Gyro filters and Rate loop checked line by line against the PX4 source (v1.17 to main) and corrected.
