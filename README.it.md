@@ -16,6 +16,8 @@ Analisi offline dei log di volo **PX4 (v1.17 e successive)**: i grafici di Fligh
 tabella info (airframe, hardware, versione, durata, distanza, velocità, inclinazione, corrente), mappa/traiettoria e vista dall'alto, quota stimata, inseguimento di angoli e rate (con integrale), posizione e velocità locali, ingressi del radiocomando, comandi agli attuatori e relativa FFT, uscite di motori e servo, RPM degli ESC, accelerazioni e gyro grezzi, metriche di vibrazione, FFT e spettrogrammi (accelerazione, velocità e accelerazione angolare, FIFO ad alta frequenza), regolarità del campionamento, magnetometro, sensore di distanza, incertezza GPS, rumore e jamming, spinta rispetto al campo magnetico, alimentazione e temperature, flag dell'estimatore, flag di failsafe, CPU e RAM, risposta al gradino (PID analysis), parametri non di default, messaggi ed **eventi PX4 decodificati offline**, sfondo colorato per i modi di volo, marker dei cambi di parametro.
 
 **In più:**
+- **Replay del volo** da 1× a 20×: drone orientato con la scia sulla mappa satellitare e sulla vista dall'alto, quota, velocità al suolo, velocità verticale e rotta in tempo reale.
+- **Batteria**: tensione del pacco e per cella a inizio e fine log, minima sotto carico.
 - **Confronto tra più voli** con metriche identiche: vibrazioni e oscillazioni misurate solo in hover tranquillo, hover thrust, squilibrio dei motori, errore di assetto, dropout, CPU; sovrapposizione delle PSD.
 - **Diff dei parametri** tra log e file `.params` di QGroundControl (trascinali nella finestra).
 - **PSD solo sui tratti di hover tranquillo**: in aria, stick centrati, velocità sotto 2,5 m/s, con soglia adattiva.
@@ -56,7 +58,7 @@ Alternative valutate:
 ## Privacy
 
 - Il parsing avviene interamente nel browser o nell'app: nessun dato di volo esce dal computer.
-- La mappa è offline (traccia senza sfondo); le tile di OpenStreetMap sono un'opzione disattivata di default, perché scaricarle rivela al tile server la zona del volo.
+- La mappa è offline (traccia senza sfondo); le immagini satellitari (Esri World Imagery) sono un'opzione disattivata di default, perché scaricarle rivela al fornitore la zona del volo.
 - L'.exe contatta solo `api.github.com` per verificare le release di questo repository.
 - Quando apri una issue **non allegare log di volo in pubblico**, a meno che tu non voglia condividerli: possono contenere posizioni GPS, date e identificativi del veicolo.
 - `.gitignore` esclude `*.ulg`, `*.params` e le chiavi.

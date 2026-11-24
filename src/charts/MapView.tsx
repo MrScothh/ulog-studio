@@ -2,30 +2,27 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Tooltip, ToggleButton, Button, makeStyles, tokens } from '@fluentui/react-components';
-import { ArrowExpandRegular, ArrowMinimizeRegular, ZoomFitRegular } from '@fluentui/react-icons';
+import { ArrowExpandRegular, ArrowMinimizeRegular, ZoomFitRegular, LocationArrowRegular } from '@fluentui/react-icons';
 import type { MapSpec } from '../core/types';
 import { FLIGHT_MODES } from '../core/px4';
 import { useChartCtx } from './ChartContext';
 import { ChartFrame } from './ChartFrame';
 import { useCursorT, cursorSync, useTimeRange } from './timeSync';
+import { useReplayState, replayState, locate, lerp, lerpDeg } from './replayState';
 import { fmtTime } from './theme';
 import { prefs } from '../app/prefs';
 
-type Basemap = 'offline' | 'satellite' | 'streets';
+type Basemap = 'offline' | 'satellite';
 
-/** Basemaps. Online sources are opt-in: tile requests tell the provider which area is being looked at. */
-const BASEMAPS: Record<Exclude<Basemap, 'offline'>, { url: string; attribution: string; maxNativeZoom: number }> = {
-  satellite: {
-    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    attribution: 'Imagery © Esri, Maxar, Earthstar Geographics, GIS User Community',
-    maxNativeZoom: 19,
-  },
-  streets: {
-    url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-    attribution: '© OpenStreetMap contributors',
-    maxNativeZoom: 19,
-  },
+/** Satellite imagery is opt-in: tile requests tell the provider which area is being looked at. */
+const SATELLITE = {
+  url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+  attribution: 'Imagery © Esri, Maxar, Earthstar Geographics, GIS User Community',
+  // z19+ is missing in many rural areas (grey "not available" tiles): overzoom from 18 instead
+  maxNativeZoom: 18,
 };
+
+const TRAIL_S = 15; // seconds of track drawn behind the drone
 
 const useStyles = makeStyles({
   seg: { display: 'inline-flex', gap: '2px', padding: '2px', borderRadius: tokens.borderRadiusMedium, backgroundColor: tokens.colorNeutralBackground3 },
@@ -46,24 +43,35 @@ function lb(a: ArrayLike<number>, v: number): number {
   return lo;
 }
 
+/** Drone marker: an arrow pointing along the heading. */
+const droneIcon = L.divIcon({
+  className: 'drone-marker',
+  iconSize: [30, 30],
+  iconAnchor: [15, 15],
+  html: '<svg viewBox="0 0 30 30" width="30" height="30"><g class="drone-rot"><path d="M15 3 L24 25 L15 20 L6 25 Z" fill="#ffd166" stroke="#1f1f1f" stroke-width="2" stroke-linejoin="round"/></g></svg>',
+});
+
 /**
- * Trajectory map. Offline by default (track only, no basemap). Satellite (Esri World Imagery) and street (OpenStreetMap)
- * basemaps are opt-in. The track is coloured by flight mode, follows the timeline zoom (selected stretch highlighted)
- * and shares the cursor with every chart.
+ * Trajectory map. Offline by default (track only, no basemap); satellite imagery (Esri World Imagery) is opt-in.
+ * The track is coloured by flight mode, follows the timeline zoom (selected stretch highlighted), shares the cursor
+ * with every chart and shows the drone (with heading and a short trail) during a replay.
  */
 export function MapView({ spec }: { spec: MapSpec }) {
   const s = useStyles();
   const ctx = useChartCtx();
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
-  const cursor = useRef<L.CircleMarker | null>(null);
+  const drone = useRef<L.Marker | null>(null);
+  const trail = useRef<L.Polyline | null>(null);
   const label = useRef<L.Tooltip | null>(null);
   const tracks = useRef<{ line: L.Polyline; casing: L.Polyline; i0: number; i1: number }[]>([]);
   const focus = useRef<L.LayerGroup | null>(null);
-  const [base, setBase] = useState<Basemap>(prefs.get<Basemap>('basemap', 'offline'));
+  const stored = prefs.get<string>('basemap', 'offline');
+  const [base, setBase] = useState<Basemap>(stored === 'satellite' ? 'satellite' : 'offline');
   const [tall, setTall] = useState(false);
   const cursorT = useCursorT();
   const range = useTimeRange(ctx.logId);
+  const replay = useReplayState();
   const pts = useMemo(() => Array.from(spec.lat, (la, i) => L.latLng(la, spec.lon[i])), [spec]);
   const onImagery = base === 'satellite';
 
@@ -89,8 +97,9 @@ export function MapView({ spec }: { spec: MapSpec }) {
     mk(pts[pts.length - 1], '#e34948', `End ${fmtTime(spec.t[spec.t.length - 1])}`);
     L.control.scale({ imperial: false }).addTo(m);
     m.fitBounds(L.latLngBounds(pts).pad(0.15));
-    cursor.current = L.circleMarker(pts[0], { radius: 7, color: '#242424', weight: 3, fillColor: '#ffd166', fillOpacity: 1, interactive: false });
-    label.current = L.tooltip({ permanent: true, direction: 'top', offset: [0, -10], className: 'map-cursor-label' });
+    trail.current = L.polyline([], { color: '#ffd166', weight: 4, opacity: 0.95, interactive: false });
+    drone.current = L.marker(pts[0], { icon: droneIcon, interactive: false, keyboard: false, zIndexOffset: 1000 });
+    label.current = L.tooltip({ permanent: true, direction: 'top', offset: [0, -16], className: 'map-cursor-label' });
     // plain wheel scrolls the page; Ctrl+wheel zooms (same as the charts)
     const host = el.current;
     const onWheel = (e: WheelEvent) => {
@@ -99,9 +108,10 @@ export function MapView({ spec }: { spec: MapSpec }) {
       m.setZoomAround(m.mouseEventToContainerPoint(e as unknown as MouseEvent), m.getZoom() + (e.deltaY < 0 ? 0.5 : -0.5));
     };
     host.addEventListener('wheel', onWheel, { passive: false });
-    // hover near the track → flight cursor
+    // hover near the track → flight cursor (ignored while a replay is running)
     const step = Math.max(1, Math.floor(pts.length / 4000));
     m.on('mousemove', (e: L.LeafletMouseEvent) => {
+      if (replayState.get().playing) return;
       const p0 = m.latLngToContainerPoint(e.latlng);
       let best = -1, bd = 24 * 24;
       for (let i = 0; i < pts.length; i += step) {
@@ -111,7 +121,9 @@ export function MapView({ spec }: { spec: MapSpec }) {
       }
       cursorSync.set(best >= 0 ? spec.t[best] : null, 'ext');
     });
-    m.on('mouseout', () => cursorSync.set(null, 'ext'));
+    m.on('mouseout', () => { if (!replayState.get().playing) cursorSync.set(null, 'ext'); });
+    // the user moving the map turns "follow" off
+    m.on('dragstart', () => { if (replayState.get().playing) replayState.set({ follow: false }); });
     const ro = new ResizeObserver(() => m.invalidateSize());
     ro.observe(host);
     return () => { ro.disconnect(); host.removeEventListener('wheel', onWheel); m.remove(); map.current = null; };
@@ -121,8 +133,7 @@ export function MapView({ spec }: { spec: MapSpec }) {
   useEffect(() => {
     const m = map.current;
     if (!m || base === 'offline') return;
-    const b = BASEMAPS[base];
-    const layer = L.tileLayer(b.url, { maxZoom: 21, maxNativeZoom: b.maxNativeZoom, attribution: b.attribution, referrerPolicy: 'no-referrer' } as L.TileLayerOptions).addTo(m);
+    const layer = L.tileLayer(SATELLITE.url, { maxZoom: 21, maxNativeZoom: SATELLITE.maxNativeZoom, attribution: SATELLITE.attribution, referrerPolicy: 'no-referrer' } as L.TileLayerOptions).addTo(m);
     layer.bringToBack();
     return () => { m.removeLayer(layer); };
   }, [base, spec, ctx.theme]);
@@ -146,19 +157,31 @@ export function MapView({ spec }: { spec: MapSpec }) {
     }
   }, [range, spec, pts, ctx.theme, onImagery]);
 
-  // flight cursor marker with time / mode / height
+  // drone at the flight cursor: interpolated position, heading arrow, trail, label (time · mode · height)
   useEffect(() => {
-    const m = map.current, c = cursor.current, lab = label.current;
-    if (!m || !c || !lab) return;
-    if (cursorT == null || cursorT < spec.t[0] || cursorT > spec.t[spec.t.length - 1]) { c.remove(); lab.remove(); return; }
-    const i = Math.min(pts.length - 1, lb(spec.t, cursorT));
-    c.setLatLng(pts[i]);
-    if (!m.hasLayer(c)) c.addTo(m);
+    const m = map.current, d = drone.current, lab = label.current, tr = trail.current;
+    if (!m || !d || !lab || !tr) return;
+    if (cursorT == null || cursorT < spec.t[0] || cursorT > spec.t[spec.t.length - 1]) { d.remove(); lab.remove(); tr.remove(); return; }
+    const [i, f] = locate(spec.t, cursorT);
+    const p = L.latLng(lerp(spec.lat, i, f), lerp(spec.lon, i, f));
+    d.setLatLng(p);
+    if (!m.hasLayer(d)) d.addTo(m);
+    const rot = d.getElement()?.querySelector<SVGGElement>('.drone-rot');
+    const hdg = spec.hdg ? lerpDeg(spec.hdg, i, f) : NaN;
+    if (rot) rot.setAttribute('transform', Number.isFinite(hdg) ? `rotate(${hdg} 15 15)` : '');
+    const j0 = lb(spec.t, cursorT - TRAIL_S);
+    tr.setLatLngs([...pts.slice(j0, i + 1), p]);
+    if (!m.hasLayer(tr)) tr.addTo(m);
     const mode = ctx.modes.find((md) => cursorT >= md.t0 && cursorT < md.t1);
-    const h = spec.alt ? ` · ${(spec.alt[i] as number).toFixed(1)} m` : '';
-    lab.setLatLng(pts[i]).setContent(`${fmtTime(cursorT)}${mode ? ` · ${mode.name}` : ''}${h}`);
+    const h = spec.alt ? ` · ${lerp(spec.alt, i, f).toFixed(1)} m` : '';
+    lab.setLatLng(p).setContent(`${fmtTime(cursorT)}${mode ? ` · ${mode.name}` : ''}${h}`);
     if (!m.hasLayer(lab)) lab.addTo(m);
-  }, [cursorT, spec, pts, ctx.modes]);
+    // follow the drone while replaying: re-centre when it leaves the middle of the view
+    if (replay.playing && replay.follow) {
+      const size = m.getSize(), q = m.latLngToContainerPoint(p);
+      if (q.x < size.x * 0.25 || q.x > size.x * 0.75 || q.y < size.y * 0.25 || q.y > size.y * 0.75) m.panTo(p, { animate: true, duration: 0.4 });
+    }
+  }, [cursorT, spec, pts, ctx.modes, replay.playing, replay.follow]);
 
   useEffect(() => { map.current?.invalidateSize(); }, [tall]);
 
@@ -180,8 +203,8 @@ export function MapView({ spec }: { spec: MapSpec }) {
       <div className={s.seg} role="radiogroup" aria-label="Basemap">
         <Tooltip relationship="description" content="No basemap: nothing is downloaded."><ToggleButton size="small" appearance="subtle" checked={base === 'offline'} onClick={() => pick('offline')}>Offline</ToggleButton></Tooltip>
         <Tooltip relationship="description" content="Esri World Imagery, loaded from the internet: the provider learns the area you are looking at."><ToggleButton size="small" appearance="subtle" checked={base === 'satellite'} onClick={() => pick('satellite')}>Satellite</ToggleButton></Tooltip>
-        <Tooltip relationship="description" content="OpenStreetMap, loaded from the internet: the provider learns the area you are looking at."><ToggleButton size="small" appearance="subtle" checked={base === 'streets'} onClick={() => pick('streets')}>Streets</ToggleButton></Tooltip>
       </div>
+      <Tooltip relationship="label" content="Follow the drone during the replay"><ToggleButton size="small" appearance="subtle" icon={<LocationArrowRegular />} checked={replay.follow} onClick={() => replayState.set({ follow: !replay.follow })} /></Tooltip>
       <Tooltip relationship="label" content={range ? 'Fit the zoomed stretch' : 'Fit the whole track'}><Button size="small" appearance="subtle" icon={<ZoomFitRegular />} onClick={fit} /></Tooltip>
       <Tooltip relationship="label" content={tall ? 'Smaller map' : 'Taller map'}><Button size="small" appearance="subtle" icon={tall ? <ArrowMinimizeRegular /> : <ArrowExpandRegular />} onClick={() => setTall(!tall)} /></Tooltip>
     </>
@@ -190,14 +213,15 @@ export function MapView({ spec }: { spec: MapSpec }) {
     <ChartFrame title={spec.title} extra={controls}>
       {/* Leaflet owns the inner element's classes: React must never rewrite them, so the state class lives on the wrapper */}
       <div className={`map-frame ${base === 'offline' ? 'map-offline' : 'map-online'}`}>
-        <div ref={el} className="map-host" style={{ height: tall ? 680 : 420 }} />
+        <div ref={el} className="map-host" style={{ height: tall ? 680 : 440 }} />
       </div>
       <div className={s.legend}>
         {modesShown.map(([n, c]) => <span key={n}><span className={s.line} style={{ backgroundColor: c }} />{n}</span>)}
         <span><span className={s.dot} style={{ backgroundColor: '#1baf7a' }} />Start</span>
         <span><span className={s.dot} style={{ backgroundColor: '#e34948' }} />End</span>
         {spec.home && <span><span className={s.dot} style={{ border: '2px solid #2a78d6', width: 8, height: 8 }} />Home</span>}
-        <span>Ctrl+wheel to zoom · zoom the timeline to highlight a stretch</span>
+        <span><span className={s.line} style={{ backgroundColor: '#ffd166' }} />Last {TRAIL_S} s</span>
+        <span>Ctrl+wheel to zoom</span>
       </div>
     </ChartFrame>
   );

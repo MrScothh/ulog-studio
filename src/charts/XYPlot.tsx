@@ -6,6 +6,7 @@ import { ChartFrame } from './ChartFrame';
 import { axisCommon, seriesColor, fmtTime } from './theme';
 import { useWidth } from './useUplot';
 import { cursorSync, useCursorT } from './timeSync';
+import { replayState, locate, lerp, lerpDeg } from './replayState';
 import { saveCanvasPng } from '../app/platform';
 
 /** Draw a parametric series in sample order (uPlot's linear builder assumes x sorted and bins by pixel column). */
@@ -32,7 +33,7 @@ export function XYPlot({ spec }: { spec: XYPlotSpec }) {
   const marker = useRef<HTMLDivElement>(null);
   const width = useWidth(outer, ctx.staticWidth);
   const plot = useRef<uPlot | null>(null);
-  const pts = useRef<{ x: number[]; y: number[]; t: number[] } | null>(null);
+  const pts = useRef<{ x: number[]; y: number[]; t: number[]; h?: number[] } | null>(null);
   const height = spec.height ?? 320;
   const cur = useCursorT();
 
@@ -60,9 +61,9 @@ export function XYPlot({ spec }: { spec: XYPlotSpec }) {
     const step = (n: number) => Math.max(1, Math.floor(n / 20000));
     const data: uPlot.AlignedData = [null as unknown as number[], ...spec.series.map((s, si) => {
       const k = step(s.x.length);
-      const xs: number[] = [], ys: number[] = [], ts: number[] = [];
-      for (let i = 0; i < s.x.length; i += k) { xs.push(s.x[i]); ys.push(s.y[i]); if (s.t) ts.push(s.t[i]); }
-      if (si === 0 && s.t) pts.current = { x: xs, y: ys, t: ts };
+      const xs: number[] = [], ys: number[] = [], ts: number[] = [], hs: number[] = [];
+      for (let i = 0; i < s.x.length; i += k) { xs.push(s.x[i]); ys.push(s.y[i]); if (s.t) ts.push(s.t[i]); if (s.hdg) hs.push(s.hdg[i]); }
+      if (si === 0 && s.t) pts.current = { x: xs, y: ys, t: ts, h: s.hdg ? hs : undefined };
       return [xs, ys] as unknown as number[];
     })] as unknown as uPlot.AlignedData;
     const opts: uPlot.Options = {
@@ -89,7 +90,7 @@ export function XYPlot({ spec }: { spec: XYPlotSpec }) {
     // hover → nearest point of the trajectory → flight cursor
     const onMove = (e: MouseEvent) => {
       const p = pts.current;
-      if (!p) return;
+      if (!p || replayState.get().playing) return;
       const r = u.over.getBoundingClientRect();
       const mx = e.clientX - r.left, my = e.clientY - r.top;
       let best = -1, bd = 24 * 24;
@@ -100,7 +101,7 @@ export function XYPlot({ spec }: { spec: XYPlotSpec }) {
       }
       cursorSync.set(best >= 0 ? p.t[best] : null, 'ext');
     };
-    const onLeave = () => cursorSync.set(null, 'ext');
+    const onLeave = () => { if (!replayState.get().playing) cursorSync.set(null, 'ext'); };
     u.over.addEventListener('mousemove', onMove);
     u.over.addEventListener('mouseleave', onLeave);
     const unreg = ctx.register?.(spec.id, spec.title, () => u.ctx.canvas.toDataURL('image/png'));
@@ -115,20 +116,21 @@ export function XYPlot({ spec }: { spec: XYPlotSpec }) {
     const u = plot.current, p = pts.current, m = marker.current;
     if (!m) return;
     if (!u || !p || cur == null || !p.t.length || cur < p.t[0] || cur > p.t[p.t.length - 1]) { m.style.display = 'none'; return; }
-    let lo = 0, hi = p.t.length - 1;
-    while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (p.t[mid] < cur) lo = mid; else hi = mid; }
+    const [i, f] = locate(p.t, cur);
     const over = u.over.getBoundingClientRect(), host = target.current!.getBoundingClientRect();
     m.style.display = 'block';
-    m.style.left = `${over.left - host.left + u.valToPos(p.x[lo], 'x')}px`;
-    m.style.top = `${over.top - host.top + u.valToPos(p.y[lo], 'y')}px`;
-    m.title = fmtTime(p.t[lo]);
+    m.style.left = `${over.left - host.left + u.valToPos(lerp(p.x, i, f), 'x')}px`;
+    m.style.top = `${over.top - host.top + u.valToPos(lerp(p.y, i, f), 'y')}px`;
+    const hd = p.h ? lerpDeg(p.h, i, f) : NaN;
+    m.style.transform = Number.isFinite(hd) ? `rotate(${hd}deg)` : '';
+    m.title = fmtTime(cur);
   }, [cur]);
 
   return (
     <ChartFrame title={spec.title} note={spec.note} onSavePng={() => plot.current && saveCanvasPng(plot.current.ctx.canvas, `${spec.id}.png`)} bodyRef={outer}>
       <div style={{ position: 'relative' }}>
         <div ref={target} className="uplot-host" style={{ minHeight: height }} />
-        <div ref={marker} className="xy-marker" style={{ display: 'none' }} />
+        <div ref={marker} className="xy-marker" style={{ display: 'none' }}><svg viewBox="0 0 30 30" width="26" height="26"><path d="M15 3 L24 25 L15 20 L6 25 Z" fill="#ffd166" stroke="#1f1f1f" strokeWidth="2" strokeLinejoin="round" /></svg></div>
       </div>
     </ChartFrame>
   );

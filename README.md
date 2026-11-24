@@ -22,6 +22,8 @@
 
 **On top of that**
 - **Flight timeline** — modes, armed/in-air, time-located alerts (events, failsafes, dropouts, parameter changes, takeoff/landing); drag to zoom, click a mode to zoom on it. The cursor is shared between every chart, the map and the top-down view.
+- **Flight replay** — play the flight back at 1–20× with the drone (heading and trail) on the satellite map and the top view, live height, ground speed, climb rate and heading.
+- **Battery** — pack and per-cell voltage at the start and end of the log, minimum under load.
 - **Multi-flight comparison** with identical metrics (vibration and oscillation measured on quiet hover only, hover thrust, motor imbalance, attitude error, dropouts, CPU) and overlaid spectra.
 - **Parameter diff** between logs and QGroundControl `.params` files (just drop them in).
 - **Quiet-hover PSD** — airborne, sticks centred, speed < 2.5 m/s, adaptive threshold.
@@ -38,7 +40,7 @@
 ## Privacy
 
 - Parsing and analysis run entirely on your machine (a Web Worker in the browser or the desktop app).
-- The map is offline by default (track only); OpenStreetMap tiles are opt-in because downloading them tells the tile server where you flew.
+- The map is offline by default (track only); satellite imagery (Esri World Imagery) is opt-in because downloading it tells the imagery provider where you flew.
 - The desktop app only contacts `api.github.com` to check this repository's releases.
 - When reporting an issue, please **do not attach flight logs publicly** unless you are fine with sharing them: they can contain GPS positions, dates and vehicle identifiers.
 

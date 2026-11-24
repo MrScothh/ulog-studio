@@ -41,7 +41,8 @@ export default defineConfig(({ mode }) => {
     plugins.push(VitePWA({
       registerType: 'prompt',
       injectRegister: false,
-      workbox: { globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest,wasm}'], maximumFileSizeToCacheInBytes: 20 * 1024 * 1024 },
+      // new versions activate right away (used from the next reload) instead of waiting for every tab to close
+      workbox: { globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest,wasm}'], maximumFileSizeToCacheInBytes: 20 * 1024 * 1024, skipWaiting: true, clientsClaim: true },
       manifest: {
         name: 'ULog Studio', short_name: 'ULog Studio', description: 'Offline PX4 flight log analysis',
         theme_color: '#0f6cbd', background_color: '#fafafa', display: 'standalone',

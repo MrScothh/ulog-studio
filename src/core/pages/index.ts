@@ -101,10 +101,39 @@ export function infoTables(log: ULog): { left: [string, string][]; right: [strin
     if (mc > 0.1) right.push(['Average current', `${mean(b.cols['current_a']).toFixed(1)} A`], ['Max current', `${mc.toFixed(1)} A`]);
     const dis = b.cols['discharged_mah'];
     if (dis && dis[dis.length - 1] > 1) right.push(['Discharged', `${dis[dis.length - 1].toFixed(0)} mAh`]);
-    const [vmin, vmax] = minMax(b.cols['voltage_v'].filter((v) => v > 1));
-    if (isFinite(vmin)) right.push(['Battery voltage', `${vmax.toFixed(2)} → ${vmin.toFixed(2)} V`]);
+    right.push(...batteryRows(log));
   }
   return { left, right };
+}
+
+/** Battery voltage at the start and at the end of the log (median of 2 s), minimum under load, and per cell. */
+export function batteryRows(log: ULog): [string, string][] {
+  const b = log.topic('battery_status');
+  if (!b || !b.cols['voltage_v']) return [];
+  const idx: number[] = [];
+  for (let i = 0; i < b.count; i++) if (b.cols['voltage_v'][i] > 1) idx.push(i);
+  if (idx.length < 3) return [];
+  const t = (i: number) => b.t[i], v = (i: number) => b.cols['voltage_v'][i];
+  const med = (a: number[]) => { const s = [...a].sort((x, y) => x - y); return s[s.length >> 1]; };
+  const first = idx.filter((i) => t(i) <= t(idx[0]) + 2).map(v);
+  const last = idx.filter((i) => t(i) >= t(idx[idx.length - 1]) - 2).map(v);
+  const arms = armedIntervals(log);
+  const loaded = idx.filter((i) => !arms.length || arms.some(([a, c]) => t(i) >= a && t(i) <= c)).map(v);
+  const v0 = med(first), v1 = med(last), vmin = loaded.length ? minMax(loaded)[0] : NaN;
+  const rows: [string, string][] = [['Battery voltage', `${v0.toFixed(2)} → ${v1.toFixed(2)} V${isFinite(vmin) ? `  (min ${vmin.toFixed(2)} V under load)` : ''}`]];
+  // per-cell: measured cells if the battery reports them, otherwise pack voltage / cell count
+  const n = (log.params.get('BAT1_N_CELLS') ?? 0) || (b.cols['cell_count'] ? minMax(b.cols['cell_count'])[1] : 0);
+  const cellCols: Float64Array[] = [];
+  for (let k = 0; k < 14; k++) { const c = b.cols[`voltage_cell_v[${k}]`]; if (c && c.some((x) => x > 2.5 && x < 4.6)) cellCols.push(c); }
+  if (cellCols.length >= 2) {
+    const at = (sel: number[]) => cellCols.map((c) => med(sel.map((i) => c[i])));
+    const c0 = at(idx.filter((i) => t(i) <= t(idx[0]) + 2)), c1 = at(idx.filter((i) => t(i) >= t(idx[idx.length - 1]) - 2));
+    const span = (a: number[]) => `${minMax(a)[0].toFixed(2)}–${minMax(a)[1].toFixed(2)}`;
+    rows.push([`Cell voltage (${cellCols.length}S, measured)`, `${span(c0)} → ${span(c1)} V`]);
+  } else if (n > 0) {
+    rows.push([`Cell voltage (${n}S, average)`, `${(v0 / n).toFixed(2)} → ${(v1 / n).toFixed(2)} V${isFinite(vmin) ? `  (min ${(vmin / n).toFixed(2)} V under load)` : ''}`]);
+  }
+  return rows;
 }
 
 export function overviewFindings(log: ULog, events?: DecodedEvent[]): Finding[] {
@@ -186,7 +215,7 @@ export function overviewPage(log: ULog, events?: DecodedEvent[]): PageSpec {
     id: 'overview',
     sections: [
       sec('summary', 'Summary', [{ kind: 'stats', id: 'stats', items: stats }, { kind: 'findings', id: 'findings', title: 'Automatic checks', items: overviewFindings(log, events) }]),
-      sec('trajectory', 'Trajectory', [FR.gpsMap(log), FR.positionXY(log)], 'Point at the track to see that moment on the timeline and on every chart.'),
+      sec('trajectory', 'Trajectory & replay', [FR.replay(log), FR.gpsMap(log), FR.positionXY(log)], 'Play the flight back, or point at the track to see that moment on the timeline and on every chart.'),
       sec('info', 'Vehicle & log', [{ kind: 'kv', id: 'info-left', title: 'Vehicle', items: left }, { kind: 'kv', id: 'info-right', title: 'Flight', items: right }]),
     ],
   };

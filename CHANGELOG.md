@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.4 — 2026-11-24
+
+- Flight replay (Overview › Trajectory & replay): play/pause, 1–20× speed, position slider; the drone (heading arrow, 15 s trail) moves on the map and on the top view, the map can follow it, the timeline cursor follows; live mode, height, ground speed, climb rate and heading.
+- Battery: start and end pack voltage (median of 2 s) with the minimum under load, and the per-cell voltage (measured cells when the battery reports them, otherwise pack / cell count).
+- Map: satellite or offline only (street map removed); the scale label is crisp (Leaflet's text shadow was overriding the app style); satellite tiles overzoom from level 18 to avoid grey "not available" tiles.
+- Web app: new versions are picked up on the next reload without closing every tab.
+
 ## 0.1.3 — 2026-11-24
 
 - Map: satellite basemap (Esri World Imagery) next to offline and OpenStreetMap; the choice is remembered. Online basemaps stay opt-in.

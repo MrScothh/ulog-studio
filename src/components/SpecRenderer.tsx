@@ -10,6 +10,7 @@ import { XYPlot } from '../charts/XYPlot';
 import { SpectrogramPlot } from '../charts/SpectrogramPlot';
 import { BarChart } from '../charts/BarChart';
 import { MapView } from '../charts/MapView';
+import { ReplayBar } from './ReplayBar';
 import { saveCsv } from '../app/platform';
 
 const useStyles = makeStyles({
@@ -172,6 +173,7 @@ export function SpecItem({ spec }: { spec: PlotSpec }) {
     case 'spectrogram': return <SpectrogramPlot spec={spec} />;
     case 'bars': return <BarChart spec={spec} />;
     case 'map': return <MapView spec={spec} />;
+    case 'replay': return <ReplayBar spec={spec} />;
     case 'table': return <TableView spec={spec} />;
     case 'kv': return <KVView spec={spec} />;
     case 'findings': return <FindingsView spec={spec} />;

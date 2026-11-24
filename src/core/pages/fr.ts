@@ -3,11 +3,11 @@
  * Each function returns one plot spec (or undefined when the data is not in the log), in Flight Review order.
  */
 import type { ULog } from '../ulog';
-import type { PlotSpec, TimePlotSpec, XYPlotSpec, MapSpec, Mark } from '../types';
+import type { PlotSpec, TimePlotSpec, XYPlotSpec, MapSpec, Mark, ReplaySpec } from '../types';
 import { ser, timePlot, compact, fftPlot, specPlot, DEG, isAllConstant, maxAbs } from './helpers';
-import { eulerCols, gnssTopic, flightModes, AXES } from '../px4';
+import { eulerCols, gnssTopic, flightModes, AXES, airborneIntervals } from '../px4';
 import { unpackFifo } from '../ulog';
-import { diff, minMax } from '../dsp';
+import { diff, minMax, lowerBound } from '../dsp';
 
 const cap = (s: string) => s[0].toUpperCase() + s.slice(1);
 
@@ -15,7 +15,8 @@ export function positionXY(log: ULog): XYPlotSpec | undefined {
   const lp = log.topic('vehicle_local_position');
   if (!lp || !lp.cols['x']) return undefined;
   if (maxAbs(lp.cols['x']) + maxAbs(lp.cols['y']) === 0) return undefined;
-  const series: XYPlotSpec['series'] = [{ label: 'Estimated', x: Float32Array.from(lp.cols['y']), y: Float32Array.from(lp.cols['x']), t: lp.t, color: 0 }];
+  const hdg = lp.cols['heading'] ? Float32Array.from(lp.cols['heading'], (h) => (h * 180) / Math.PI) : undefined;
+  const series: XYPlotSpec['series'] = [{ label: 'Estimated', x: Float32Array.from(lp.cols['y']), y: Float32Array.from(lp.cols['x']), t: lp.t, hdg, color: 0 }];
   const sp = log.topic('vehicle_local_position_setpoint');
   if (sp && sp.cols['x'] && sp.count > 1) series.push({ label: 'Setpoint', x: Float32Array.from(sp.cols['y']), y: Float32Array.from(sp.cols['x']), color: 1, dash: true });
   return { kind: 'xy', id: 'pos-xy', title: 'Local position (top view)', xLabel: 'East y [m]', yLabel: 'North x [m]', series, equal: true, height: 380 };
@@ -60,7 +61,31 @@ export function gpsMap(log: ULog): MapSpec | undefined {
     const ref = homeAlt !== undefined && isFinite(homeAlt) ? homeAlt : alt[keep[0]];
     rel = Float32Array.from(keep, (i) => alt![i] - ref);
   }
-  return { kind: 'map', id: 'map', title: 'Trajectory', lat: la, lon: lo, t: tt, alt: rel, segments, home: h };
+  // heading at the map samples (nearest local-position sample: no wrap-around artefacts)
+  let hdg: Float32Array | undefined;
+  const lp = log.topic('vehicle_local_position');
+  if (lp && lp.cols['heading']) {
+    const hh = lp.cols['heading'];
+    hdg = Float32Array.from(tt, (ti) => (hh[Math.min(lp.count - 1, lowerBound(lp.t, ti))] * 180) / Math.PI);
+  }
+  return { kind: 'map', id: 'map', title: 'Trajectory', lat: la, lon: lo, t: tt, alt: rel, hdg, segments, home: h };
+}
+
+/** Replay time base and live values from vehicle_local_position. */
+export function replay(log: ULog): ReplaySpec | undefined {
+  const lp = log.topic('vehicle_local_position');
+  if (!lp || !lp.cols['z'] || lp.count < 10) return undefined;
+  const air = airborneIntervals(log);
+  const n = lp.count;
+  const f32 = (fn: (i: number) => number) => Float32Array.from({ length: n }, (_, i) => fn(i));
+  return {
+    kind: 'replay', id: 'replay', t0: lp.t[0], t1: lp.t[n - 1], start: air.length ? Math.max(lp.t[0], air[0][0] - 3) : lp.t[0],
+    t: lp.t,
+    height: f32((i) => -lp.cols['z'][i]),
+    speed: f32((i) => Math.hypot(lp.cols['vx'][i], lp.cols['vy'][i])),
+    vz: f32((i) => -lp.cols['vz'][i]),
+    hdg: f32((i) => (lp.cols['heading'] ? (lp.cols['heading'][i] * 180) / Math.PI : NaN)),
+  };
 }
 
 export function altitude(log: ULog): TimePlotSpec | undefined {

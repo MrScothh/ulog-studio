@@ -43,22 +43,24 @@ body {
 .map-host { background: var(--u-map-bg); }
 .map-offline .leaflet-container { background: var(--u-map-bg); background-image: radial-gradient(circle, rgba(128,128,128,0.25) 1px, transparent 1px); background-size: 22px 22px; }
 .leaflet-container { font-family: inherit; }
-/* map controls in the app's style: crisp scale (Leaflet's white text-shadow doubles the label on dark), readable attribution */
-.leaflet-control-scale-line {
-  text-shadow: none; font: 600 11px/1.4 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
-  color: #242424; background: rgba(255, 255, 255, 0.85); border: 2px solid #242424; border-top: none; padding: 0 6px 1px;
+/* map controls in the app's style. Scoped under .map-frame because leaflet.css is bundled after this file
+   (same specificity would lose); Leaflet's white text-shadow is what made the scale label look doubled. */
+.map-frame .leaflet-control-scale-line {
+  text-shadow: none !important; -webkit-font-smoothing: antialiased;
+  font: 600 11px/16px 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
+  color: #1f1f1f; background: rgba(255, 255, 255, 0.9); border: 2px solid #1f1f1f; border-top: none; padding: 0 6px; box-sizing: content-box;
 }
-.leaflet-control-attribution { font-size: 10px; background: rgba(255, 255, 255, 0.75) !important; color: #444; }
-.leaflet-control-attribution a { color: #0f6cbd; }
-:root[data-theme='dark'] .leaflet-bar a { background: #2b2b2b; color: #e6e6e6; border-color: #555; }
-:root[data-theme='dark'] .leaflet-bar a:hover { background: #3a3a3a; }
-:root[data-theme='dark'] .leaflet-control-scale-line { color: #f0f0f0; background: rgba(32, 32, 32, 0.85); border-color: #f0f0f0; }
-:root[data-theme='dark'] .leaflet-control-attribution { background: rgba(32, 32, 32, 0.75) !important; color: #bbb; }
-:root[data-theme='dark'] .leaflet-control-attribution a { color: #6cb8f6; }
+.map-frame .leaflet-control-attribution { font-size: 10px; background: rgba(255, 255, 255, 0.8) !important; color: #444; text-shadow: none; }
+.map-frame .leaflet-control-attribution a { color: #0f6cbd; }
+:root[data-theme='dark'] .map-frame .leaflet-bar a { background: #2b2b2b; color: #e6e6e6; border-color: #555; }
+:root[data-theme='dark'] .map-frame .leaflet-bar a:hover { background: #3a3a3a; }
+:root[data-theme='dark'] .map-frame .leaflet-control-scale-line { color: #f5f5f5; background: rgba(20, 20, 20, 0.85); border-color: #f5f5f5; }
+:root[data-theme='dark'] .map-frame .leaflet-control-attribution { background: rgba(20, 20, 20, 0.8) !important; color: #bbb; }
+:root[data-theme='dark'] .map-frame .leaflet-control-attribution a { color: #6cb8f6; }
 /* flight-cursor label on the map */
-.leaflet-tooltip.map-cursor-label { font: 600 11px/1.3 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif; padding: 2px 7px; border-radius: 4px; border: none; background: #242424; color: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.3); white-space: nowrap; }
+.map-frame .leaflet-tooltip.map-cursor-label, .leaflet-tooltip.map-cursor-label { font: 600 11px/1.3 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif; padding: 2px 7px; border-radius: 4px; border: none; background: #242424; color: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.3); white-space: nowrap; }
 .leaflet-tooltip-top.map-cursor-label::before { border-top-color: #242424; }
-:root[data-theme='dark'] .leaflet-tooltip.map-cursor-label { background: #f0f0f0; color: #1f1f1f; }
+:root[data-theme='dark'] .map-frame .leaflet-tooltip.map-cursor-label, .leaflet-tooltip.map-cursor-label { background: #f0f0f0; color: #1f1f1f; }
 :root[data-theme='dark'] .leaflet-tooltip-top.map-cursor-label::before { border-top-color: #f0f0f0; }
 
 ::-webkit-scrollbar { width: 10px; height: 10px; }
@@ -68,8 +70,25 @@ body {
 /* legend values only while pointing at the chart */
 .uplot-host .u-idle .u-legend td.u-value { visibility: hidden; }
 /* vehicle position at the flight cursor in the XY view */
-.xy-marker { position: absolute; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; background: #ffd166; border: 2px solid var(--u-text); pointer-events: none; z-index: 3; }
+.xy-marker { position: absolute; width: 26px; height: 26px; margin: -13px 0 0 -13px; pointer-events: none; z-index: 3; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5)); }
+.xy-marker svg { display: block; }
+/* drone marker on the map */
+.leaflet-marker-icon.drone-marker { background: none; border: none; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.6)); }
 /* chart toolbar appears on hover/focus to keep the page calm */
 .chart-actions { opacity: 0; transition: opacity 120ms ease; }
 .chart-frame:hover .chart-actions, .chart-frame:focus-within .chart-actions { opacity: 1; }
 @media (hover: none) { .chart-actions { opacity: 1; } }
+
+/* replay position slider (native range, Fluent-like) */
+.replay-range { -webkit-appearance: none; appearance: none; height: 20px; background: transparent; cursor: pointer; margin: 0; }
+.replay-range::-webkit-slider-runnable-track {
+  height: 4px; border-radius: 2px;
+  background: linear-gradient(90deg, #0f6cbd 0, #0f6cbd var(--p, 0%), rgba(128,128,128,0.45) var(--p, 0%), rgba(128,128,128,0.45) 100%);
+}
+.replay-range::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 18px; height: 18px; margin-top: -7px; border-radius: 50%;
+  background: #0f6cbd; border: 3px solid var(--u-surface); box-shadow: 0 0 0 1px rgba(128,128,128,0.6);
+}
+:root[data-theme='dark'] .replay-range::-webkit-slider-runnable-track { background: linear-gradient(90deg, #479ef5 0, #479ef5 var(--p, 0%), rgba(255,255,255,0.25) var(--p, 0%), rgba(255,255,255,0.25) 100%); }
+:root[data-theme='dark'] .replay-range::-webkit-slider-thumb { background: #479ef5; }
+.replay-range:focus-visible { outline: 2px solid #0f6cbd; outline-offset: 2px; border-radius: 4px; }

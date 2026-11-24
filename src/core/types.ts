@@ -48,7 +48,7 @@ export interface FreqPlotSpec {
   note?: string;
 }
 
-export interface XYSeries { label: string; x: Num; y: Num; t?: Num; color?: number; points?: boolean; dash?: boolean }
+export interface XYSeries { label: string; x: Num; y: Num; t?: Num; hdg?: Num; color?: number; points?: boolean; dash?: boolean }
 export interface XYPlotSpec {
   kind: 'xy';
   id: string;
@@ -101,15 +101,31 @@ export interface MapSpec {
   t: Num;
   /** height above home / takeoff [m], same samples as lat/lon */
   alt?: Num;
+  /** heading [deg, 0 = north], same samples */
+  hdg?: Num;
   home?: [number, number];
   segments: { i0: number; i1: number; mode: number }[];
 }
 
 export interface BarSpec { kind: 'bars'; id: string; title: string; categories: string[]; values: number[]; unit?: string; note?: string; signed?: boolean }
 
+/** Flight replay: time base and the values shown while playing (from vehicle_local_position). */
+export interface ReplaySpec {
+  kind: 'replay';
+  id: string;
+  t0: number;
+  t1: number;
+  start: number; // takeoff (or log start)
+  t: Num;
+  height: Num; // above the local origin [m]
+  speed: Num; // horizontal ground speed [m/s]
+  vz: Num; // climb rate [m/s], positive up
+  hdg: Num; // [deg]
+}
+
 export interface StatSpec { kind: 'stats'; id: string; items: { label: string; value: string; sub?: string; tone?: Tone }[] }
 
-export type PlotSpec = TimePlotSpec | FreqPlotSpec | XYPlotSpec | SpectrogramSpec | TableSpec | KVSpec | FindingsSpec | TextSpec | MapSpec | StatSpec | BarSpec;
+export type PlotSpec = TimePlotSpec | FreqPlotSpec | XYPlotSpec | SpectrogramSpec | TableSpec | KVSpec | FindingsSpec | TextSpec | MapSpec | StatSpec | BarSpec | ReplaySpec;
 
 export interface Section { id: string; title: string; description?: string; items: PlotSpec[] }
 export interface PageSpec { id: string; sections: Section[] }
