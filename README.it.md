@@ -55,6 +55,10 @@ Alternative valutate:
 - **PlotJuggler** e **Foxglove** sono ottimi per esplorare i dati, ma non fanno le analisi PX4: l'Explorer ne riprende l'idea.
 - **pyulog** e le librerie ULog in Rust/WASM: il parser in TypeScript basta (log da 27 MB analizzato in circa 40 ms) ed evita il passaggio da WASM.
 
+## Documentazione
+
+Il **[wiki](https://github.com/MrScothh/ulog-studio/wiki)** (in inglese) spiega ogni pagina: [impostazioni di logging](docs/Logging-setup.md), [filtri del gyro](docs/Gyro-filters.md), [rate loop](docs/Rate-loop.md), [FAQ](docs/FAQ.md) e altro; il sorgente è in [`docs/`](docs/Home.md). Per domande: [Discussions](https://github.com/MrScothh/ulog-studio/discussions).
+
 ## Privacy
 
 - Il parsing avviene interamente nel browser o nell'app: nessun dato di volo esce dal computer.

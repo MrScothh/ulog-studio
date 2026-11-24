@@ -1,0 +1,63 @@
+name: Bug report
+description: Something is wrong, or a plot or analysis looks off
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! **Flight logs can contain GPS positions, dates and vehicle identifiers.** Only attach a `.ulg` here if you are fine with it being public; otherwise describe the problem and offer to share the log privately.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you saw, and on which page / section.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+      description: If an analysis looks wrong, what did you compare it with (Flight Review, PlotJuggler, PX4 docs, a script)?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open a log with …
+        2. Go to …
+        3. …
+  - type: dropdown
+    id: flavour
+    attributes:
+      label: Which ULog Studio
+      options:
+        - Windows app
+        - Web app (browser / installed PWA)
+        - Single HTML file
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: ULog Studio version
+      description: Shown at the bottom of the start page (and in the update dialog of the Windows app).
+      placeholder: "0.1.7"
+    validations:
+      required: true
+  - type: input
+    id: px4
+    attributes:
+      label: PX4 version of the log
+      placeholder: "v1.17.0"
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and OS (web app)
+      placeholder: "Edge 131, Windows 11"
+  - type: textarea
+    id: extra
+    attributes:
+      label: Screenshots or other context
+      description: Check that screenshots do not show anything you would rather keep private (map, file names).

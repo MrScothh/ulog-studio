@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question or idea to discuss
+    url: https://github.com/MrScothh/ulog-studio/discussions
+    about: Ask how to read a page, share a tuning result or discuss an idea.
+  - name: Documentation
+    url: https://github.com/MrScothh/ulog-studio/wiki
+    about: How each page works, logging setup, FAQ.
+  - name: Security vulnerability
+    url: https://github.com/MrScothh/ulog-studio/security/advisories/new
+    about: Report security problems privately, not as a public issue.

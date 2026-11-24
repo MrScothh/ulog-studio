@@ -1,0 +1,44 @@
+name: Wiki
+
+# Publishes docs/ to the GitHub wiki: links to "Page.md" become wiki links "Page".
+on:
+  push:
+    branches: [main]
+    paths: ['docs/**', '.github/workflows/wiki.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: wiki
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Publish docs/ to the wiki
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          url="https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.wiki.git"
+          if ! git clone --depth 1 "$url" wiki 2>/dev/null; then
+            echo "::warning::The wiki has no page yet. Create any first page once on GitHub (Wiki tab), then re-run this workflow."
+            exit 0
+          fi
+          find wiki -maxdepth 1 -type f -name '*.md' -delete
+          for f in docs/*.md; do
+            name=$(basename "$f")
+            [ "$name" = "README.md" ] && continue
+            sed -E 's/\]\(([A-Za-z0-9_-]+)\.md(#[^)]*)?\)/](\1\2)/g' "$f" > "wiki/$name"
+          done
+          cd wiki
+          git config user.name "github-actions[bot]"
+          git config user.email "41898299+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then echo "Wiki already up to date"; exit 0; fi
+          git commit -m "Sync with ${GITHUB_SHA::7}"
+          git push

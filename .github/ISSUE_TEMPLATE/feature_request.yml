@@ -1,0 +1,20 @@
+name: Feature request
+description: An analysis, plot or improvement you would like to see
+labels: [enhancement]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What would you like to analyse or change, and why?
+    validations:
+      required: true
+  - type: textarea
+    id: data
+    attributes:
+      label: PX4 topics and parameters involved
+      placeholder: "vehicle_angular_velocity, IMU_GYRO_CUTOFF, …"
+  - type: textarea
+    id: judge
+    attributes:
+      label: How would you judge the result?
+      description: Thresholds, references, the Flight Review / PlotJuggler / PX4 docs equivalent.

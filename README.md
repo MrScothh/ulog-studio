@@ -37,6 +37,10 @@
 - **Explorer** (PlotJuggler-style): any field of any topic, drag & drop onto synchronised panels.
 - **Exports** — self-contained HTML report (every page, charts as images, printable to PDF), CSV/PNG of any chart, proposed filter/gain values as a `.params` file to load manually in QGroundControl. ULog Studio never writes parameters to a vehicle.
 
+## Documentation
+
+The **[wiki](https://github.com/MrScothh/ulog-studio/wiki)** explains every page: [logging setup](docs/Logging-setup.md), [Gyro filters](docs/Gyro-filters.md), [Rate loop](docs/Rate-loop.md), [FAQ](docs/FAQ.md) and more. Its source is in [`docs/`](docs/Home.md). Questions are welcome in [Discussions](https://github.com/MrScothh/ulog-studio/discussions).
+
 ## Privacy
 
 - Parsing and analysis run entirely on your machine (a Web Worker in the browser or the desktop app).
