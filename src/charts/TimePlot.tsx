@@ -128,7 +128,7 @@ export function TimePlot({ spec }: { spec: TimePlotSpec }) {
 
   // range changes
   useEffect(() => {
-    const r: [number, number] = range ?? [Math.min(0, ...spec.series.map((s) => s.t[0] ?? 0)), ctx.duration];
+    const r: [number, number] = range ?? [0, ctx.duration]; // whole log; samples stamped before the log start stay out of view
     rangeRef.current = r;
     const u = plot.current;
     if (u) u.setData(buildData(r, u.width), true);

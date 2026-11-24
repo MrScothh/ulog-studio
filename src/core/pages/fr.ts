@@ -88,14 +88,51 @@ export function replay(log: ULog): ReplaySpec | undefined {
   };
 }
 
+/**
+ * Downward-facing rangefinders (lidar) as altitude: distance + ground level, so they line up with the MSL curves.
+ * Ground level = home altitude (fallback: fused altitude at the first valid reading minus that reading).
+ */
+function lidarSeries(log: ULog): TimePlotSpec['series'] {
+  const out: TimePlotSpec['series'] = [];
+  const home = log.topic('home_position');
+  let ground = home && home.cols['alt'] && home.count ? home.cols['alt'][home.count - 1] : NaN;
+  for (let inst = 0; inst < 4; inst++) {
+    const key = inst ? `distance_sensor_${inst}` : 'distance_sensor';
+    const d = log.topic(key);
+    if (!d || !d.cols['current_distance']) continue;
+    const orient = d.cols['orientation'];
+    if (orient && !Array.from(orient).some((o) => o === 25)) continue; // 25 = ROTATION_DOWNWARD_FACING
+    const dist = d.cols['current_distance'], mn = d.cols['min_distance'], mx = d.cols['max_distance'], q = d.cols['signal_quality'];
+    const valid = (i: number) => (!orient || orient[i] === 25) && dist[i] > (mn?.[i] ?? 0) && dist[i] < (mx?.[i] ?? Infinity) && (q ? q[i] !== 0 : true);
+    if (!Number.isFinite(ground)) {
+      const gp = log.topic('vehicle_global_position');
+      const i0 = Array.from({ length: d.count }, (_, i) => i).find(valid);
+      if (gp && gp.cols['alt'] && i0 !== undefined) ground = gp.cols['alt'][Math.min(gp.count - 1, lowerBound(gp.t, d.t[i0]))] - dist[i0];
+    }
+    if (!Number.isFinite(ground)) continue;
+    // break the line where readings are missing for > 3 s (out of range / not published) instead of bridging the gap
+    const tt: number[] = [], yy: number[] = [];
+    for (let i = 0; i < d.count; i++) {
+      if (i > 0 && d.t[i] - d.t[i - 1] > 3) { tt.push((d.t[i] + d.t[i - 1]) / 2); yy.push(NaN); }
+      tt.push(d.t[i]); yy.push(valid(i) ? ground + dist[i] : NaN);
+    }
+    if (!yy.some((v) => v === v)) continue;
+    out.push({ label: `Lidar${inst ? ` ${inst}` : ''} (distance + home altitude)`, t: Float64Array.from(tt), y: Float32Array.from(yy), color: 3, width: 1.6 });
+  }
+  return out;
+}
+
 export function altitude(log: ULog): TimePlotSpec | undefined {
   const g = gnssTopic(log);
+  const lidar = lidarSeries(log);
   return timePlot('altitude', 'Altitude estimate', [
     g ? ser(log, g, 'altitude_msl_m', 'GPS altitude (MSL)', 0) : undefined,
     ser(log, 'vehicle_air_data', 'baro_alt_meter', 'Barometer altitude', 1),
     ser(log, 'vehicle_global_position', 'alt', 'Fused altitude estimate', 2),
-    ser(log, 'position_setpoint_triplet', 'current.alt', 'Altitude setpoint', 4, { points: true }),
-  ], { yLabel: 'm' });
+    ...lidar,
+    // only valid setpoints (an unset triplet logs alt = 0)
+    ser(log, 'position_setpoint_triplet', 'current.alt', 'Altitude setpoint', 4, { points: true, fn: (v, i, d) => (d.cols['current.valid']?.[i] && v !== 0 ? v : NaN) }),
+  ], { yLabel: 'm', note: lidar.length ? 'Lidar plotted as distance to ground + home altitude: it matches the other curves over flat ground.' : undefined });
 }
 
 export function attitudeAngle(log: ULog, axis: (typeof AXES)[number], i: number): TimePlotSpec | undefined {

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.6 — 2026-11-24
+
+- Altitude estimate: downward-facing rangefinder (lidar) added as distance + home altitude, only valid readings, line broken where readings are missing.
+- Altitude estimate: only valid altitude setpoints are shown (an unset setpoint triplet logs 0 m and squashed the scale).
+- Time plots open on the log time span (samples stamped before the log start no longer push the axis to negative times).
+
 ## 0.1.5 — 2026-11-24
 
 - Narrow windows: the sections stay visible as a compact icon rail (labels on hover) instead of being hidden behind the menu button; the menu button still opens the full list.
